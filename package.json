@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "sst dev next dev",
+    "lint": "next lint",
+    "start": "next start"
   },
   "license": "Apache-2.0",
   "dependencies": {
@@ -91,6 +91,7 @@
     "remark-stringify": "^11.0.0",
     "robots-parser": "^3.0.1",
     "sonner": "^1.3.1",
+    "sst": "ion",
     "tailwind-merge": "^2.2.0",
     "tailwindcss-animate": "^1.0.7",
     "unified": "^11.0.4",
@@ -149,7 +150,7 @@
   "packageManager": "pnpm@8.15.7",
   "pnpm": {
     "overrides": {
-      "pdfjs-dist>canvas": "file:../_EXCLUDED_"
+      "pdfjs-dist\u003ecanvas": "file:../_EXCLUDED_"
     }
   }
 }

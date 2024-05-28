@@ -47,3 +47,9 @@ test.http
 # nextra
 www/public/robots.txt
 www/public/sitemap*
+
+# sst
+.sst
+
+# open-next
+.open-next
