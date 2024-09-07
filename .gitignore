@@ -4,3 +4,4 @@
 redis-data
 data
 venv
+.aider*

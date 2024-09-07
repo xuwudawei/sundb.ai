@@ -27,7 +27,7 @@ class Document(UpdatableBaseModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     hash: str = Field(max_length=32)
     name: str = Field(max_length=256)
-    content: str = Field(sa_column=Column(MEDIUMTEXT))
+    content: str = Field(sa_column=Column(Text))
     mime_type: str = Field(max_length=64)
     source_uri: str = Field(max_length=512)
     meta: dict | list = Field(default={}, sa_column=Column(JSON))

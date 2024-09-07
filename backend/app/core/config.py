@@ -61,17 +61,24 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "TiDB.AI"
     SENTRY_DSN: HttpUrl | None = None
 
-    LOCAL_FILE_STORAGE_PATH: str = "/shared/data"
+    LOCAL_FILE_STORAGE_PATH: str = "/Users/apple/Desktop/Tsinghua/Research/tidb-xuwu.ai/shared/data"
 
-    TIDB_HOST: str = "127.0.0.1"
-    TIDB_PORT: int = 4000
-    TIDB_USER: str = "root"
-    TIDB_PASSWORD: str = ""
-    TIDB_DATABASE: str
-    TIDB_SSL: bool = True
+    # TIDB_HOST: str = "127.0.0.1"
+    # TIDB_PORT: int = 4000
+    # TIDB_USER: str = "root"
+    # TIDB_PASSWORD: str = ""
+    # TIDB_DATABASE: str
+    # TIDB_SSL: bool = True
 
-    CELERY_BROKER_URL: str = "redis://redis:6379/0"
-    CELERY_RESULT_BACKEND: str = "redis://redis:6379/0"
+    TIDB_HOST: str = "localhost"
+    TIDB_PORT: int = 5432
+    TIDB_USER: str = "myuser"
+    TIDB_PASSWORD: str = "mypassword"
+    TIDB_DATABASE: str = "mydb"
+    TIDB_SSL: bool = False
+
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
     # TODO: move below config to `option` table, it should be configurable by staff in console
     TIDB_AI_CHAT_ENDPOINT: str = "https://tidb.ai/api/v1/chats"
@@ -82,32 +89,31 @@ class Settings(BaseSettings):
     # Currently, we only support 1536 dims for the embedding model
     EMBEDDOMG_DIMS: int = 1536
 
-    @computed_field  # type: ignore[misc]
-    @property
-    def SQLALCHEMY_DATABASE_URI(self) -> MySQLDsn:
-        return MultiHostUrl.build(
-            scheme="mysql+pymysql",
-            username=self.TIDB_USER,
-            password=self.TIDB_PASSWORD,
-            host=self.TIDB_HOST,
-            port=self.TIDB_PORT,
-            path=self.TIDB_DATABASE,
-            query="ssl_verify_cert=true&ssl_verify_identity=true"
-            if self.TIDB_SSL
-            else None,
-        )
+    # @computed_field  # type: ignore[misc]
+    # @property
+    # def SQLALCHEMY_DATABASE_URI(self) -> MySQLDsn:
+    #     return MultiHostUrl.build(
+    #         scheme="mysql+pymysql",
+    #         username=self.TIDB_USER,
+    #         password=self.TIDB_PASSWORD,
+    #         host=self.TIDB_HOST,
+    #         port=self.TIDB_PORT,
+    #         path=self.TIDB_DATABASE,
+    #         query="ssl_verify_cert=true&ssl_verify_identity=true"
+    #         if self.TIDB_SSL
+    #         else None,
+    #     )
+
 
     @computed_field  # type: ignore[misc]
     @property
-    def SQLALCHEMY_ASYNC_DATABASE_URI(self) -> MySQLDsn:
-        return MultiHostUrl.build(
-            scheme="mysql+asyncmy",
-            username=self.TIDB_USER,
-            password=self.TIDB_PASSWORD,
-            host=self.TIDB_HOST,
-            port=self.TIDB_PORT,
-            path=self.TIDB_DATABASE,
-        )
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        return f"postgresql+psycopg2://{self.TIDB_USER}:{self.TIDB_PASSWORD}@{self.TIDB_HOST}:{self.TIDB_PORT}/{self.TIDB_DATABASE}?sslmode=disable"
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def SQLALCHEMY_ASYNC_DATABASE_URI(self) -> str:
+        return f"postgresql+asyncpg://{self.TIDB_USER}:{self.TIDB_PASSWORD}@{self.TIDB_HOST}:{self.TIDB_PORT}/{self.TIDB_DATABASE}?ssl=disable"
 
     @model_validator(mode="after")
     def _validate_secrets(self) -> Self:

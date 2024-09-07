@@ -12,7 +12,8 @@ from sqlmodel import (
     Relationship as SQLModelRelationship,
     DateTime,
 )
-from tidb_vector.sqlalchemy import VectorType
+# from tidb_vector.sqlalchemy import VectorType
+from pgvector.sqlalchemy import Vector
 
 
 class EntityType(str, enum.Enum):
@@ -34,10 +35,10 @@ class EntityBase(SQLModel):
 class Entity(EntityBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     description_vec: Any = Field(
-        sa_column=Column(VectorType(1536), comment="hnsw(distance=cosine)")
+        sa_column=Column(Vector(1536), comment="hnsw(distance=cosine)")
     )
     meta_vec: Any = Field(
-        sa_column=Column(VectorType(1536), comment="hnsw(distance=cosine)")
+        sa_column=Column(Vector(1536), comment="hnsw(distance=cosine)")
     )
 
     __tablename__ = "entities"
@@ -70,7 +71,7 @@ class RelationshipBase(SQLModel):
 class Relationship(RelationshipBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     description_vec: Any = Field(
-        sa_column=Column(VectorType(1536), comment="hnsw(distance=cosine)")
+        sa_column=Column(Vector(1536), comment="hnsw(distance=cosine)")
     )
     source_entity: Entity = SQLModelRelationship(
         sa_relationship_kwargs={

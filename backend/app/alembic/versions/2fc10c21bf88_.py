@@ -9,7 +9,8 @@ Create Date: 2024-07-10 14:43:55.913126
 from alembic import op
 import sqlalchemy as sa
 import sqlmodel.sql.sqltypes
-from tidb_vector.sqlalchemy import VectorType
+# from tidb_vector.sqlalchemy import VectorType
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
@@ -59,7 +60,7 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("hash", sqlmodel.sql.sqltypes.AutoString(length=32), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=256), nullable=False),
-        sa.Column("content", mysql.MEDIUMTEXT(), nullable=True),
+        sa.Column("content", sa.Text(), nullable=True),
         sa.Column(
             "mime_type", sqlmodel.sql.sqltypes.AutoString(length=64), nullable=False
         ),
@@ -98,13 +99,13 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
             "description_vec",
-            VectorType(dim=1536),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
         sa.Column(
             "meta_vec",
-            VectorType(dim=1536),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
@@ -116,14 +117,14 @@ def upgrade():
         sa.Column("query", sa.Text(), nullable=True),
         sa.Column(
             "query_vec",
-            VectorType(dim=1536),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
         sa.Column("value", sa.Text(), nullable=True),
         sa.Column(
             "value_vec",
-            VectorType(dim=1536),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
@@ -289,7 +290,7 @@ def upgrade():
         sa.Column("meta", sa.JSON(), nullable=True),
         sa.Column(
             "embedding",
-            VectorType(dim=1536),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
@@ -329,7 +330,7 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
             "description_vec",
-            VectorType(dim=1536),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),

@@ -8,7 +8,8 @@ from sqlmodel import (
     JSON,
     Relationship as SQLRelationship,
 )
-from tidb_vector.sqlalchemy import VectorType
+# from tidb_vector.sqlalchemy import VectorType
+from pgvector.sqlalchemy import Vector
 from llama_index.core.schema import TextNode
 
 from .base import UpdatableBaseModel, UUIDBaseModel
@@ -27,7 +28,7 @@ class Chunk(UUIDBaseModel, UpdatableBaseModel, table=True):
     text: str = Field(sa_column=Column(Text))
     meta: dict | list = Field(default={}, sa_column=Column(JSON))
     embedding: Any = Field(
-        sa_column=Column(VectorType(1536), comment="hnsw(distance=cosine)")
+        sa_column=Column(Vector(1536), comment="hnsw(distance=cosine)")
     )
     document_id: int = Field(foreign_key="documents.id", nullable=True)
     document: "Document" = SQLRelationship(

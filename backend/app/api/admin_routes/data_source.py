@@ -13,6 +13,9 @@ from app.tasks import (
 )
 from app.repositories import data_source_repo
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -67,19 +70,37 @@ def get_datasource(
     return data_source
 
 
+# @router.delete("/admin/datasources/{data_source_id}")
+# def delete_datasource(
+#     session: SessionDep,
+#     user: CurrentSuperuserDep,
+#     data_source_id: int,
+# ):
+#     data_source = data_source_repo.get(session, data_source_id)
+#     if data_source is None:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="Data source not found",
+#         )
+#     data_source_repo.delete(session, data_source)
+#     purge_datasource_related_resources.apply_async(args=[data_source_id], countdown=5)
+
 @router.delete("/admin/datasources/{data_source_id}")
 def delete_datasource(
     session: SessionDep,
     user: CurrentSuperuserDep,
     data_source_id: int,
 ):
+    logger.debug(f"Attempting to delete data source with ID: {data_source_id}")
     data_source = data_source_repo.get(session, data_source_id)
     if data_source is None:
+        logger.error(f"Data source with ID {data_source_id} not found.")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Data source not found",
         )
     data_source_repo.delete(session, data_source)
+    logger.info(f"Data source with ID {data_source_id} deleted successfully.")
     purge_datasource_related_resources.apply_async(args=[data_source_id], countdown=5)
 
 
@@ -93,6 +114,6 @@ def get_datasource_overview(
     if data_source is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Data source not found",
+            detail=f"Data source with ID {data_source_id} not found",
         )
     return data_source_repo.overview(session, data_source)

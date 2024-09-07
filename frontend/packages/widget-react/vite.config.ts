@@ -14,15 +14,14 @@ const overridingPackages = [
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    visualizer(),
-  ].concat(process.env.NODE_ENV === 'development' ? [] : [injectCss()]),
+  plugins: [react(), visualizer()].concat(
+    process.env.NODE_ENV === "development" ? [] : [injectCss()]
+  ),
   build: {
     lib: {
-      entry: 'src/library.tsx',
-      formats: ['cjs'],
-      fileName: () => 'widget.js',
+      entry: "src/library.tsx",
+      formats: ["cjs"],
+      fileName: () => "widget.js",
     },
     rollupOptions: {
       output: {
@@ -30,35 +29,35 @@ export default defineConfig({
       },
     },
   },
-  publicDir: '../../app/public',
+  publicDir: "../../app/public",
   resolve: {
     alias: [
-      ...overriding.map(override => ({
-        find: path.join('@', override),
+      ...overriding.map((override) => ({
+        find: path.join("@", override),
         replacement: path.resolve(__dirname, `src/overrides`, override),
       })),
-      ...overridingPackages.map(override => ({
+      ...overridingPackages.map((override) => ({
         find: override,
         replacement: path.resolve(__dirname, `src/overrides`, override),
       })),
       {
-        find: '@',
-        replacement: path.resolve(__dirname, '../../app/src'),
+        find: "@",
+        replacement: path.resolve(__dirname, "../../app/src"),
       },
     ],
   },
   define: {
-    'process.env.BASE_URL': '""',
-    'process.env.NEXT_PUBLIC_BASE_URL': '""',
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-    'process.env.NEXT_PUBLIC_DISABLE_DEBUG_PANEL': 'false',
-    'process.env.NEXT_PUBLIC_MOCKING_CHAT': 'false',
-    'process.env.NEXT_PUBLIC_IS_WIDGET': 'true',
-    'process.env.__NEXT_ROUTER_BASEPATH': '""',
+    "process.env.BASE_URL": '""',
+    "process.env.NEXT_PUBLIC_BASE_URL": '""',
+    "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV),
+    "process.env.NEXT_PUBLIC_DISABLE_DEBUG_PANEL": "false",
+    "process.env.NEXT_PUBLIC_MOCKING_CHAT": "false",
+    "process.env.NEXT_PUBLIC_IS_WIDGET": "true",
+    "process.env.__NEXT_ROUTER_BASEPATH": '""',
   },
   server: {
     proxy: {
-      '/api': 'https://tidbai-dev.htapdb.com',
+      "/api": "http://localhost:5500",
     },
   },
 });

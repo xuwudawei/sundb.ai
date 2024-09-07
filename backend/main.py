@@ -48,6 +48,10 @@ dictConfig(
                 "handlers": ["console"],
                 "propagate": False,
             },
+            "__main__": {
+                "level": "DEBUG",  # Add this to capture more logs from the main module
+                "handlers": ["console"],
+            },
         },
     }
 )
@@ -79,6 +83,7 @@ if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.debug("Updating DB cache...")
     SiteSetting.update_db_cache()
     yield
 
@@ -131,11 +136,12 @@ def cli():
 
 @cli.command()
 @click.option("--host", default="127.0.0.1", help="Host, default=127.0.0.1")
-@click.option("--port", default=3000, help="Port, default=3000")
+@click.option("--port", default=5500, help="Port, default=5500")
 def runserver(host, port):
-    warnings.warn(
-        "This command will start the server in development mode, do not use it in production."
-    )
+    logger.debug("Starting the server...")
+    # warnings.warn(
+    #     "This command will start the server in development mode, do not use it in production."
+    # )
     uvicorn.run("main:app", host=host, port=port, reload=True, log_level="debug")
 
 

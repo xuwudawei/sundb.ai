@@ -49,7 +49,7 @@ def prepare_db_connection(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     # In TiDB.AI, we store datetime in the database using UTC timezone.
     # Therefore, we need to set the timezone to '+00:00'.
-    cursor.execute("SET time_zone = '+00:00'")
+    cursor.execute("SET timezone = '+00:00'")
     cursor.close()
 
 
