@@ -2,11 +2,13 @@ import ssl
 import contextlib
 from typing import AsyncGenerator, Generator
 
-from sqlmodel import create_engine, Session
+from sqlmodel import create_engine, Session, text
 from sqlalchemy import event
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker, Session
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
+from pgvector.psycopg2 import register_vector  # Import pgvector registration
+
 
 from app.core.config import settings
 
@@ -20,6 +22,11 @@ engine = create_engine(
     pool_recycle=300,
     pool_pre_ping=True,
 )
+
+# Register the vector type
+with Session(engine) as session:
+    with session.begin():
+        session.execute(text("create extension if not exists vector;"))
 
 # create a scoped session, ensure in multi-threading environment, each thread has its own session
 Scoped_Session = scoped_session(sessionmaker(bind=engine, class_=Session))

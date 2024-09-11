@@ -1,10 +1,10 @@
 from logging.config import fileConfig
+import pgvector
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 # from tidb_vector.sqlalchemy import VectorType
-from pgvector.sqlalchemy import Vector
 
 
 from app.core.config import settings
@@ -68,7 +68,7 @@ def run_migrations_online():
     )
 
     with connectable.connect() as connection:
-        # connection.dialect.ischema_names["vector"] = VectorType
+        connection.dialect.ischema_names["vector"] = pgvector.sqlalchemy.VECTOR
         context.configure(
             connection=connection, target_metadata=target_metadata, compare_type=True
         )

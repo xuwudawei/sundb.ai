@@ -103,7 +103,7 @@ class TiDBVectorStore(BasePydanticVectorStore):
         """
         assert ref_doc_id.isdigit(), "ref_doc_id must be an integer."
         delete_stmt = delete(DBChunk).where(DBChunk.document_id == int(ref_doc_id))
-        self._session.exec(delete_stmt)
+        self._session.scalars(delete_stmt)
         self._session.commit()
 
     def query(self, query: VectorStoreQuery, **kwargs: Any) -> VectorStoreQueryResult:
@@ -112,8 +112,7 @@ class TiDBVectorStore(BasePydanticVectorStore):
 
         Args:
             query (VectorStoreQuery): The query object containing the query data.
-            **kwargs: Additional keyword arguments.
-
+            **kwargs: Additional keyword arguments.                                                                                                          
         Returns:
             VectorStoreQueryResult: The result of the similarity search.
 
@@ -138,7 +137,7 @@ class TiDBVectorStore(BasePydanticVectorStore):
                 stmt = stmt.where(DBChunk.meta[f.key] == f.value)
 
         stmt = stmt.order_by(asc("distance")).limit(query.similarity_top_k)
-        results = self._session.exec(stmt)
+        results = self._session.scalars(stmt)
 
         nodes = []
         similarities = []

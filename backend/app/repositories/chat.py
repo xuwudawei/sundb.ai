@@ -36,7 +36,7 @@ class ChatRepo(BaseRepo):
         session: Session,
         chat_id: UUID,
     ) -> Optional[Chat]:
-        return session.exec(
+        return session.scalars(
             select(Chat).where(Chat.id == chat_id, Chat.deleted_at == None)
         ).first()
 
@@ -46,7 +46,7 @@ class ChatRepo(BaseRepo):
         session.commit()
 
     def get_last_message(self, session: Session, chat: Chat) -> Optional[ChatMessage]:
-        return session.exec(
+        return session.scalars(
             select(ChatMessage)
             .where(ChatMessage.chat_id == chat.id)
             .order_by(ChatMessage.ordinal.desc())
@@ -57,7 +57,7 @@ class ChatRepo(BaseRepo):
         session: Session,
         chat: Chat,
     ) -> List[ChatMessage]:
-        return session.exec(
+        return session.scalars(
             select(ChatMessage)
             .where(ChatMessage.chat_id == chat.id)
             .order_by(ChatMessage.ordinal.asc())
@@ -68,7 +68,7 @@ class ChatRepo(BaseRepo):
         session: Session,
         chat_message_id: int,
     ) -> Optional[ChatMessage]:
-        return session.exec(
+        return session.scalars(
             select(ChatMessage).where(
                 ChatMessage.id == chat_message_id,
                 ChatMessage.chat.has(Chat.deleted_at == None),

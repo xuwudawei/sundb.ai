@@ -111,7 +111,7 @@ class TiDBGraphStore(KnowledgeGraphStore):
             return
 
         if (
-            self._session.exec(
+            self._session.scalars(
                 select(DBRelationship).where(
                     DBRelationship.meta["chunk_id"] == chunk_id
                 )
@@ -420,7 +420,7 @@ class TiDBGraphStore(KnowledgeGraphStore):
             chunks = [
                 # TODO: add last_modified_at
                 {"text": c[0], "link": c[1], "meta": c[2]}
-                for c in session.exec(
+                for c in session.scalars(
                     select(DBChunk.text, DBChunk.document_id, DBChunk.meta).where(
                         DBChunk.id.in_(related_doc_ids)
                     )
@@ -543,7 +543,7 @@ class TiDBGraphStore(KnowledgeGraphStore):
 
         # Order by embedding distance and apply limit
         session = session or self._session
-        relationships = session.exec(query).all()
+        relationships = session.scalars(query).all()
 
         if len(relationships) <= rank_n:
             relationship_set = set([rel for rel, _ in relationships])
@@ -612,7 +612,7 @@ class TiDBGraphStore(KnowledgeGraphStore):
 
         # Retrieve entities based on their ID and similarity to the embedding
         session = session or self._session
-        for entity in session.exec(
+        for entity in session.scalars(
             select(DBEntity)
             .where(DBEntity.entity_type == entity_type)
             # .order_by(DBEntity.description_vec.cosine_distance(embedding))

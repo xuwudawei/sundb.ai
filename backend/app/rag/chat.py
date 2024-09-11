@@ -421,7 +421,7 @@ class ChatService:
                 "name": doc_name,
                 "source_uri": source_uri,
             }
-            for doc_id, doc_name, source_uri in self.db_session.exec(stmt).all()
+            for doc_id, doc_name, source_uri in self.db_session.scalars(stmt).all()
         ]
         return source_documents
 

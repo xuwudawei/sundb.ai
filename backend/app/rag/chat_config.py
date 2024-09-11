@@ -212,7 +212,7 @@ def get_llm(
 
 
 def get_default_llm(session: Session) -> LLM:
-    db_llm = session.exec(
+    db_llm = session.scalars(
         select(DBLLM).order_by(DBLLM.is_default.desc()).limit(1)
     ).first()
     if not db_llm:
@@ -245,7 +245,7 @@ def get_embedding_model(
 
 
 def get_default_embedding_model(session: Session) -> BaseEmbedding:
-    db_embedding_model = session.exec(
+    db_embedding_model = session.scalars(
         select(DBEmbeddingModel).order_by(DBEmbeddingModel.is_default.desc()).limit(1)
     ).first()
     if not db_embedding_model:
@@ -283,7 +283,7 @@ def get_reranker_model(
 
 
 def get_default_reranker_model(session: Session) -> Optional[BaseNodePostprocessor]:
-    db_reranker = session.exec(
+    db_reranker = session.scalars(
         select(DBRerankerModel).order_by(DBRerankerModel.is_default.desc()).limit(1)
     ).first()
     if not db_reranker:

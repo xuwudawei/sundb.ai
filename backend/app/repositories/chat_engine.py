@@ -28,11 +28,12 @@ class ChatEngineRepo(BaseRepo):
         return paginate(session, query, params)
 
     def get_default_engine(self, session: Session) -> Optional[ChatEngine]:
-        return session.exec(
-            select(ChatEngine).where(
-                ChatEngine.is_default == True, ChatEngine.deleted_at == None
+            result = session.scalars(
+                select(ChatEngine).where(
+                    ChatEngine.is_default == True, ChatEngine.deleted_at == None
+                )
             )
-        ).first()
+            return result.first()
 
     def get_engine_by_name(self, session: Session, name: str) -> Optional[ChatEngine]:
         return session.exec(
