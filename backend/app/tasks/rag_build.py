@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlmodel import Session, select
 from celery.utils.log import get_task_logger
 from llama_index.core.llms.llm import LLM
-
+import logging
 from app.celery import app as celery_app
 from app.core.db import engine
 from app.models import (
@@ -21,6 +21,7 @@ from app.repositories import data_source_repo
 
 
 logger = get_task_logger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def get_llm_by_data_source(session: Session, data_source: DataSource) -> LLM:
@@ -39,6 +40,7 @@ def get_llm_by_data_source(session: Session, data_source: DataSource) -> LLM:
 def build_vector_index_from_document(self, data_source_id: int, document_id: int):
     with Session(engine, expire_on_commit=False) as session:
         data_source = data_source_repo.get(session, data_source_id)
+        print(f"Received data source: {data_source}")
         if data_source is None:
             logger.error(f"Data source with id {data_source_id} not found")
             return

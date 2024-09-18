@@ -51,4 +51,5 @@ class FileDataSource(BaseDataSource):
 
 def extract_text_from_pdf(file: IO) -> str:
     reader = PdfReader(file)
+    print("\n\n".join([page.extract_text() for page in reader.pages]))
     return "\n\n".join([page.extract_text() for page in reader.pages])

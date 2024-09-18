@@ -32,7 +32,7 @@ dictConfig(
             },
         },
         "root": {
-            "level": logging.INFO
+            "level": logging.DEBUG
             if settings.ENVIRONMENT != Environment.LOCAL
             else logging.DEBUG,
             "handlers": ["console"],
@@ -44,7 +44,7 @@ dictConfig(
                 "propagate": False,
             },
             "uvicorn.access": {
-                "level": "INFO",
+                "level": "DEBUG",
                 "handlers": ["console"],
                 "propagate": False,
             },
@@ -58,6 +58,7 @@ dictConfig(
 
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 load_dotenv()

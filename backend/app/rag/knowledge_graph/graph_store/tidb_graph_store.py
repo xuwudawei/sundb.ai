@@ -489,7 +489,7 @@ class TiDBGraphStore(KnowledgeGraphStore):
         session: Optional[Session] = None,
     ) -> List[DBRelationship]:
         
-        embedding_vector = Vector(embedding)  # Convert embedding to a vector
+        embedding_vector = embedding # Convert embedding to a vector
 
         # select the relationships to rank
         subquery = (

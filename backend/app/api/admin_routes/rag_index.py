@@ -14,7 +14,7 @@ def status(session: SessionDep, user: CurrentSuperuserDep):
         .group_by(Chunk.index_status)
         .order_by(Chunk.index_status)
     )
-    status = session.exec(statement).all()
+    status = session.execute(statement).all()
     chunk_index_status = {s: c for s, c in status}
 
     statement = (
@@ -22,7 +22,7 @@ def status(session: SessionDep, user: CurrentSuperuserDep):
         .group_by(Document.index_status)
         .order_by(Document.index_status)
     )
-    status = session.exec(statement).all()
+    status = session.execute(statement).all()
     document_index_status = {s: c for s, c in status}
 
     documents_count = session.scalar(select(func.count(Document.id)))

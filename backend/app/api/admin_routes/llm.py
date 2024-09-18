@@ -115,15 +115,15 @@ def delete_llm(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="LLM not found"
         )
-    session.exec(
+    session.execute(
         update(ChatEngine).where(ChatEngine.llm_id == llm_id).values(llm_id=None)
     )
-    session.exec(
+    session.execute(
         update(ChatEngine)
         .where(ChatEngine.fast_llm_id == llm_id)
         .values(fast_llm_id=None)
     )
-    session.exec(
+    session.execute(
         update(DataSource).where(DataSource.llm_id == llm_id).values(llm_id=None)
     )
     session.delete(llm)
@@ -169,7 +169,7 @@ def get_embedding_model_detail(
     session: SessionDep,
     user: CurrentSuperuserDep,
 ) -> AdminEmbeddingModel:
-    db_embedding_model = session.exec(select(EmbeddingModel).limit(1)).first()
+    db_embedding_model = session.execute(select(EmbeddingModel).limit(1)).scalars().first()
     if db_embedding_model is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Embedding model not found"
@@ -183,7 +183,7 @@ def create_embedding_model(
     session: SessionDep,
     user: CurrentSuperuserDep,
 ) -> AdminEmbeddingModel:
-    db_embedding_model = session.exec(select(EmbeddingModel).limit(1)).first()
+    db_embedding_model = session.execute(select(EmbeddingModel).limit(1)).first()
     if db_embedding_model is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -330,7 +330,7 @@ def delete_reranker_model(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Reranker model not found"
         )
-    session.exec(
+    session.execute(
         update(ChatEngine)
         .where(ChatEngine.reranker_id == reranker_model_id)
         .values(reranker_id=None)

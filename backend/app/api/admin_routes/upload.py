@@ -46,6 +46,7 @@ def upload_files(
                 user_id=user.id,
             )
         )
+    print(uploads)
     session.add_all(uploads)
     session.commit()
     return uploads

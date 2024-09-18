@@ -15,6 +15,8 @@ from app.repositories import data_source_repo
 
 import logging
 logger = logging.getLogger(__name__)
+# Set log level to DEBUG
+logger.setLevel(logging.DEBUG)
 
 router = APIRouter()
 
