@@ -137,7 +137,7 @@ class TiDBVectorStore(BasePydanticVectorStore):
                 stmt = stmt.where(DBChunk.meta[f.key] == f.value)
 
         stmt = stmt.order_by(asc("distance")).limit(query.similarity_top_k)
-        results = self._session.scalars(stmt)
+        results = self._session.execute(stmt)
 
         nodes = []
         similarities = []

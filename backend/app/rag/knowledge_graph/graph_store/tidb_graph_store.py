@@ -11,6 +11,7 @@ from llama_index.core.embeddings.utils import EmbedType, resolve_embed_model
 from llama_index.embeddings.openai import OpenAIEmbedding, OpenAIEmbeddingModelType
 # from sqlmodel import Session, asc, func, select, text
 from sqlmodel import Session, asc, select, text
+from sqlalchemy import cast, String
 from sqlalchemy.sql import func
 from sqlalchemy.orm import aliased, defer, joinedload
 from app.core.db import engine
@@ -36,7 +37,7 @@ from pgvector.sqlalchemy import Vector
 #new changes below
 from sqlalchemy import func, cast, Float
 from sqlalchemy.dialects.postgresql import array as pg_array
-
+from sqlalchemy.dialects.postgresql import JSONB
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +116,7 @@ class TiDBGraphStore(KnowledgeGraphStore):
         if (
             self._session.scalars(
                 select(DBRelationship).where(
-                    DBRelationship.meta["chunk_id"] == chunk_id
+                    cast(DBRelationship.meta["chunk_id"], String) == str(chunk_id)
                 )
             ).first()
             is not None
@@ -519,7 +520,7 @@ class TiDBGraphStore(KnowledgeGraphStore):
         relationships_alias = aliased(DBRelationship, subquery)
 
         query = (
-            select(relationships_alias, text("embedding_distance"))
+            select(relationships_alias, subquery.c.embedding_distance)
             .options(
                 defer(relationships_alias.description_vec),
                 joinedload(relationships_alias.source_entity)
@@ -539,22 +540,30 @@ class TiDBGraphStore(KnowledgeGraphStore):
         if visited_relationships:
             query = query.where(DBRelationship.id.notin_(visited_relationships))
 
+        # if distance_range != (0.0, 1.0):
+        #     # embedding_distance bewteen the range
+        #     query = query.where(
+        #         text(
+        #             "embedding_distance >= :min_distance AND embedding_distance <= :max_distance"
+        #         )
+        #     ).params(min_distance=distance_range[0], max_distance=distance_range[1])
         if distance_range != (0.0, 1.0):
-            # embedding_distance bewteen the range
             query = query.where(
-                text(
-                    "embedding_distance >= :min_distance AND embedding_distance <= :max_distance"
-                )
-            ).params(min_distance=distance_range[0], max_distance=distance_range[1])
+                subquery.c.embedding_distance >= distance_range[0],
+                subquery.c.embedding_distance <= distance_range[1]
+            )
+
 
         if visited_entities:
             query = query.where(DBRelationship.source_entity_id.in_(visited_entities))
 
-        query = query.order_by(asc("embedding_distance")).limit(limit)
+        # query = query.order_by(asc("embedding_distance")).limit(limit)
+        query = query.order_by(asc(subquery.c.embedding_distance)).limit(limit)
+
 
         # Order by embedding distance and apply limit
         session = session or self._session
-        relationships = session.scalars(query).all()
+        relationships = session.execute(query).all()
 
         if len(relationships) <= rank_n:
             relationship_set = set([rel for rel, _ in relationships])

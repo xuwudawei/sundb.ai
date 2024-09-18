@@ -32,7 +32,8 @@ def update_entity(session: Session, entity: Entity, new_entity: dict) -> Entity:
         entity.name, entity.description, embed_model
     )
     entity.meta_vec = get_entity_metadata_embedding(entity.meta, embed_model)
-    for relationship in session.exec(
+
+    relationships = session.scalars(
         select(Relationship)
         .options(
             joinedload(Relationship.source_entity),
@@ -42,7 +43,29 @@ def update_entity(session: Session, entity: Entity, new_entity: dict) -> Entity:
             (Relationship.source_entity_id == entity.id)
             | (Relationship.target_entity_id == entity.id)
         )
-    ):
+    ).all()
+
+
+    # for relationship in session.execute(
+    #     select(Relationship)
+    #     .options(
+    #         joinedload(Relationship.source_entity),
+    #         joinedload(Relationship.target_entity),
+    #     )
+    #     .where(
+    #         (Relationship.source_entity_id == entity.id)
+    #         | (Relationship.target_entity_id == entity.id)
+    #     )
+    # ):
+    #     relationship.description_vec = get_relationship_description_embedding(
+    #         relationship.source_entity.name,
+    #         relationship.source_entity.description,
+    #         relationship.target_entity.name,
+    #         relationship.target_entity.description,
+    #         relationship.description,
+    #         embed_model,
+    #     )
+    for relationship in relationships:
         relationship.description_vec = get_relationship_description_embedding(
             relationship.source_entity.name,
             relationship.source_entity.description,
