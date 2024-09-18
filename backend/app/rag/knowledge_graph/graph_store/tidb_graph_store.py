@@ -5,7 +5,6 @@ from dspy.functional import TypedPredictor
 from deepdiff import DeepDiff
 from typing import List, Optional, Tuple, Dict, Set
 from collections import defaultdict
-from pgvector.sqlalchemy import Vector  # Import Vector for pgvector support
 
 
 from llama_index.core.embeddings.utils import EmbedType, resolve_embed_model
@@ -34,6 +33,9 @@ from app.rag.knowledge_graph.graph_store.helpers import (
     get_relationship_description_embedding,
 )
 from pgvector.sqlalchemy import Vector
+#new changes below
+from sqlalchemy import func, cast, Float
+from sqlalchemy.dialects.postgresql import array as pg_array
 
 
 logger = logging.getLogger(__name__)
@@ -210,29 +212,31 @@ class TiDBGraphStore(KnowledgeGraphStore):
             if isinstance(entity, SynopsisEntity)
             else EntityType.original
         )
-        # entity_description_vec = get_entity_description_embedding(
-        #     entity.name,
-        #     entity.description,
-        #     self._embed_model,
-        # )
-        # Convert description to vector using embedding model
-        entity_description_vec = Vector(get_entity_description_embedding(
+        
+        entity_description_vec = get_entity_description_embedding(
             entity.name,
             entity.description,
             self._embed_model,
-        ))
+        )
+
+        # Build the distance expression
+        distance_expr = func.cosine_distance(
+            DBEntity.description_vec,
+            func.array_to_vector(pg_array(entity_description_vec, type_=Float))
+        ).label("distance")
+
+
         result = (
             self._session.query(
                 DBEntity,
-                # DBEntity.description_vec.cosine_distance(entity_description_vec).label(
-                #     "distance"
-                # ),
-                func.cosine_distance(DBEntity.description_vec, entity_description_vec).label("distance"),
+                distance_expr,
+
             )
             .filter(
-                DBEntity.name == entity.name and DBEntity.entity_type == entity_type
+                DBEntity.name == entity.name,
+                DBEntity.entity_type == entity_type
             )
-            .order_by(asc("distance"))
+            .order_by(asc(distance_expr))
             .first()
         )
         if (
@@ -269,11 +273,11 @@ class TiDBGraphStore(KnowledgeGraphStore):
                     # db_obj.description_vec = get_entity_description_embedding(
                     #     db_obj.name, db_obj.description, self._embed_model
                     # )
-                    db_obj.description_vec = Vector(get_entity_description_embedding(db_obj.name, db_obj.description, self._embed_model))
+                    db_obj.description_vec = get_entity_description_embedding(db_obj.name, db_obj.description, self._embed_model)
                     # db_obj.meta_vec = get_entity_metadata_embedding(
                     #     db_obj.meta, self._embed_model
                     # )
-                    db_obj.meta_vec = Vector(get_entity_metadata_embedding(db_obj.meta, self._embed_model))
+                    db_obj.meta_vec = get_entity_metadata_embedding(db_obj.meta, self._embed_model)
                     self._session.commit()
                     self._session.refresh(db_obj)
                     return db_obj
@@ -290,7 +294,7 @@ class TiDBGraphStore(KnowledgeGraphStore):
             description_vec=entity_description_vec,
             meta=entity.metadata,
             # meta_vec=get_entity_metadata_embedding(entity.metadata, self._embed_model),
-            meta_vec=Vector(get_entity_metadata_embedding(entity.metadata, self._embed_model)),
+            meta_vec=get_entity_metadata_embedding(entity.metadata, self._embed_model),
             synopsis_info=synopsis_info_str,
             entity_type=entity_type,
         )
@@ -489,19 +493,26 @@ class TiDBGraphStore(KnowledgeGraphStore):
         session: Optional[Session] = None,
     ) -> List[DBRelationship]:
         
-        embedding_vector = embedding # Convert embedding to a vector
+        embedding_vector = embedding 
 
-        # select the relationships to rank
+        # Build the distance expression using the array_to_vector function
+        distance_expr = func.cosine_distance(
+        DBRelationship.description_vec,
+        func.array_to_vector(pg_array(embedding_vector, type_=Float))
+        ).label("embedding_distance")
+
+        # Continue with the rest of your code, replacing the previous distance expression | # select the relationships to rank
         subquery = (
             select(
                 DBRelationship,
                 # DBRelationship.description_vec.cosine_distance(embedding).label(
                 #     "embedding_distance"
                 # ),
-                func.cosine_distance(DBRelationship.description_vec, embedding_vector).label("embedding_distance"),
+                # func.cosine_distance(DBRelationship.description_vec, embedding_vector).label("embedding_distance"),
+                distance_expr
             )
             .options(defer(DBRelationship.description_vec))
-            .order_by(asc("embedding_distance"))
+            .order_by(asc(distance_expr))
             .limit(limit * 10)
         ).subquery()
 
@@ -607,7 +618,11 @@ class TiDBGraphStore(KnowledgeGraphStore):
     ):
         new_entity_set = set()
 
-        embedding_vector = Vector(embedding)  # Ensure the embedding is cast as a vector
+        # Build the distance expression using the array_to_vector function
+        distance_expr = func.cosine_distance(
+        DBEntity.description_vec,
+        func.array_to_vector(pg_array(embedding, type_=Float))
+        ).label("embedding_distance")
 
 
         # Retrieve entities based on their ID and similarity to the embedding
@@ -615,8 +630,7 @@ class TiDBGraphStore(KnowledgeGraphStore):
         for entity in session.scalars(
             select(DBEntity)
             .where(DBEntity.entity_type == entity_type)
-            # .order_by(DBEntity.description_vec.cosine_distance(embedding))
-            .order_by(func.cosine_distance(DBEntity.description_vec, embedding_vector))
+            .order_by(asc(distance_expr))
             .limit(top_k)
         ).all():
             new_entity_set.add(entity)

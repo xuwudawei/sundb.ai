@@ -53,6 +53,8 @@ async_engine = create_async_engine(
 
 
 def prepare_db_connection(dbapi_connection, connection_record):
+    # Register the vector type with psycopg2
+    register_vector(dbapi_connection)
     cursor = dbapi_connection.cursor()
     # In TiDB.AI, we store datetime in the database using UTC timezone.
     # Therefore, we need to set the timezone to '+00:00'.
