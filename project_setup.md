@@ -85,7 +85,7 @@ This guide will walk you through setting up the project, including configuring t
 ### 1. Install Dependencies
 
 - **Install Rye** (Python environment and package management tool):
-- **Link: https://rye.astral.sh/** */
+- **Link: https://rye.astral.sh/**
 
 - **Use Rye to install project dependencies**:
 
