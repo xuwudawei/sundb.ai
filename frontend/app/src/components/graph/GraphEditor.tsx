@@ -18,7 +18,7 @@ import { createPortal } from 'react-dom';
 import useSWR from 'swr';
 
 export function GraphEditor ({}: {}) {
-  const [query, setQuery] = useSearchParam('query', 'sample-question:What is TiDB?');
+  const [query, setQuery] = useSearchParam('query', 'sample-question:What is SunDB?');
 
   const [key, fetcher] = getFetchInfo(query);
 

@@ -117,7 +117,7 @@ class SiteSettingProxy:
         if not isinstance(value, type_mapping[_default_setting.data_type]):
             raise ValueError(f"{name} must be of type `{_default_setting.data_type}`.")
 
-        db_setting_obj = session.exec(
+        db_setting_obj = session.scalars(
             select(DBSiteSetting).filter(DBSiteSetting.name == name)
         ).first()
         if db_setting_obj:
