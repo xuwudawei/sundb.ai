@@ -4,6 +4,7 @@ import dspy
 from llama_index.core import VectorStoreIndex
 from llama_index.core.llms.llm import LLM
 from llama_index.core.node_parser import SentenceSplitter
+from app.core.config import settings
 from llama_index.core.extractors import (
     SummaryExtractor,
     KeywordExtractor,
@@ -45,7 +46,9 @@ class BuildService:
         if db_document.mime_type.lower() == "text/markdown":
             spliter = MarkdownNodeParser()
         else:
-            spliter = SentenceSplitter()
+            spliter = SentenceSplitter(
+                chunk_size=settings.EMBEDDING_MAX_TOKENS,
+            )
 
         _transformations = [
             spliter,

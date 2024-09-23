@@ -2,6 +2,8 @@ import enum
 from uuid import UUID
 from typing import Optional, Any, List, Dict
 from datetime import datetime
+from app.core.config import settings
+
 
 from sqlmodel import (
     SQLModel,
@@ -35,10 +37,10 @@ class EntityBase(SQLModel):
 class Entity(EntityBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     description_vec: Any = Field(
-        sa_column=Column(Vector(1536), comment="hnsw(distance=cosine)")
+        sa_column=Column(Vector(settings.EMBEDDING_DIMS), comment="hnsw(distance=cosine)")
     )
     meta_vec: Any = Field(
-        sa_column=Column(Vector(1536), comment="hnsw(distance=cosine)")
+        sa_column=Column(Vector(settings.EMBEDDING_DIMS), comment="hnsw(distance=cosine)")
     )
 
     __tablename__ = "entities"
@@ -71,7 +73,7 @@ class RelationshipBase(SQLModel):
 class Relationship(RelationshipBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     description_vec: Any = Field(
-        sa_column=Column(Vector(1536), comment="hnsw(distance=cosine)")
+        sa_column=Column(Vector(settings.EMBEDDING_DIMS), comment="hnsw(distance=cosine)")
     )
     source_entity: Entity = SQLModelRelationship(
         sa_relationship_kwargs={

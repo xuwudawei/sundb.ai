@@ -87,7 +87,9 @@ class Settings(BaseSettings):
     COMPLIED_INTENT_ANALYSIS_PROGRAM_PATH: str | None = None
 
     # Currently, we only support 1536 dims for the embedding model
-    EMBEDDOMG_DIMS: int = 1536
+    # EMBEDDOMG_DIMS: int = 1536
+    EMBEDDING_DIMS: int = 1536
+    EMBEDDING_MAX_TOKENS: int = 8191
 
     # @computed_field  # type: ignore[misc]
     # @property

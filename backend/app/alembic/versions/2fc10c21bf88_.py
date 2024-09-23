@@ -12,6 +12,7 @@ import sqlmodel.sql.sqltypes
 # from tidb_vector.sqlalchemy import VectorType
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import mysql
+from app.core.config import settings
 
 # revision identifiers, used by Alembic.
 revision = "2fc10c21bf88"
@@ -99,13 +100,13 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
             "description_vec",
-            Vector(dim=1536),
+            Vector(dim=settings.EMBEDDING_DIMS),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
         sa.Column(
             "meta_vec",
-            Vector(dim=1536),
+            Vector(dim=settings.EMBEDDING_DIMS),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
@@ -117,14 +118,14 @@ def upgrade():
         sa.Column("query", sa.Text(), nullable=True),
         sa.Column(
             "query_vec",
-            Vector(dim=1536),
+            Vector(dim=settings.EMBEDDING_DIMS),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
         sa.Column("value", sa.Text(), nullable=True),
         sa.Column(
             "value_vec",
-            Vector(dim=1536),
+            Vector(dim=settings.EMBEDDING_DIMS),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
@@ -290,7 +291,7 @@ def upgrade():
         sa.Column("meta", sa.JSON(), nullable=True),
         sa.Column(
             "embedding",
-            Vector(dim=1536),
+            Vector(dim=settings.EMBEDDING_DIMS),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
@@ -330,7 +331,7 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
             "description_vec",
-            Vector(dim=1536),
+            Vector(dim=settings.EMBEDDING_DIMS),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
