@@ -5,11 +5,11 @@ This guide will walk you through setting up the project, including configuring t
 ## Prerequisites
 
 - **Python 3.11**
-- **Conda** (for Python environment management)
 - **PostgreSQL**
 - **Redis**
 - **Node.js and pnpm (for frontend)**
 - **Make** (optional, for running migrations)
+- **Conda** (for Python environment management)
 
 ---
 
@@ -49,14 +49,6 @@ This guide will walk you through setting up the project, including configuring t
 
 4. **Create the `vector` extension** in your database:
 
-   Connect to your database:
-
-   ```bash
-   psql -d mydb -U myuser
-   ```
-
-   Then run:
-
    ```sql
    CREATE EXTENSION vector;
    ```
@@ -91,16 +83,11 @@ This guide will walk you through setting up the project, including configuring t
 
 ## Development Setup
 
-### 1. Create a Conda Environment and Install Dependencies
+### 1. Install Dependencies
 
-We recommend using a Conda environment to manage your project's dependencies and keep them isolated.
+- **Create a Conda Environment**:
 
-- **Install Conda** if you haven't already. You can download Anaconda or Miniconda:
-
-  - **Anaconda Download:** [https://www.anaconda.com/products/individual](https://www.anaconda.com/products/individual)
-  - **Miniconda Download:** [https://docs.conda.io/en/latest/miniconda.html](https://docs.conda.io/en/latest/miniconda.html)
-
-- **Create a new Conda environment**:
+  Install Conda if you haven't already. You can use [Anaconda](https://www.anaconda.com/products/individual) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
   ```bash
   conda create -n myenv python=3.11
@@ -108,19 +95,19 @@ We recommend using a Conda environment to manage your project's dependencies and
 
   Replace `myenv` with your preferred environment name.
 
-- **Activate the Conda environment**:
+- **Activate the Conda Environment**:
 
   ```bash
   conda activate myenv
   ```
 
-- **Navigate to the backend directory**:
+- **Navigate to the project directory** (if not already there):
 
   ```bash
   cd backend
   ```
 
-- **Install project dependencies**:
+- **Install Project Dependencies**:
 
   ```bash
   pip install -r requirements.lock
@@ -171,12 +158,6 @@ Ensure your Conda environment is activated before running migrations.
   cd backend
   ```
 
-- **Activate the Conda environment** (if not already activated):
-
-  ```bash
-  conda activate myenv
-  ```
-
 - **Run database migrations**:
 
   ```bash
@@ -196,25 +177,19 @@ Ensure your Conda environment is activated before starting the backend server.
 - **Start the backend server**:
 
   ```bash
-  python main.py runserver
+  rye run python main.py runserver
   ```
 
 ### 5. Create Admin User
 
 Ensure your Conda environment is activated before running the bootstrap script.
 
-- **Activate the Conda environment** (if not already activated):
-
-  ```bash
-  conda activate myenv
-  ```
-
 - **Run the bootstrap script to create credentials for the admin user**:
-  Admin Login Credentials will then be created and printed in your terminal.
 
   ```bash
   python bootstrap.py
   ```
+
 ---
 
 ## Running the Project
@@ -258,18 +233,12 @@ Ensure your Conda environment is activated before starting the backend server.
 - **Start the backend server**:
 
   ```bash
-  python main.py runserver
+  rye run python main.py runserver
   ```
 
 ### Celery Worker
 
 Ensure your Conda environment is activated before starting the Celery worker.
-
-- **Activate the Conda environment** (if not already activated):
-
-  ```bash
-  conda activate myenv
-  ```
 
 - **Start the Celery worker**:
 
@@ -280,12 +249,6 @@ Ensure your Conda environment is activated before starting the Celery worker.
 ### Celery Flower Monitoring
 
 Ensure your Conda environment is activated before starting Celery Flower.
-
-- **Activate the Conda environment** (if not already activated):
-
-  ```bash
-  conda activate myenv
-  ```
 
 - **Start Celery Flower to monitor tasks**:
 
@@ -306,11 +269,16 @@ Ensure your Conda environment is activated before starting Celery Flower.
 
 ## Quick Commands Summary
 
-### Backend Commands (ensure Conda environment is activated)
-
-- **Activate Conda Environment**:
+- **Start Redis Server**:
 
   ```bash
+  redis-server
+  ```
+
+- **Create and Activate Conda Environment**:
+
+  ```bash
+  conda create -n myenv python=3.11
   conda activate myenv
   ```
 
@@ -329,7 +297,13 @@ Ensure your Conda environment is activated before starting Celery Flower.
 - **Start Backend Server**:
 
   ```bash
-  python main.py runserver
+  rye run python main.py runserver
+  ```
+
+- **Start Frontend Server**:
+
+  ```bash
+  pnpm dev
   ```
 
 - **Start Celery Worker**:
@@ -342,34 +316,6 @@ Ensure your Conda environment is activated before starting Celery Flower.
 
   ```bash
   celery -A app.celery flower --port=5555
-  ```
-
-### Frontend Commands
-
-- **Navigate to Frontend Directory**:
-
-  ```bash
-  cd frontend
-  ```
-
-- **Install Frontend Dependencies**:
-
-  ```bash
-  pnpm install
-  ```
-
-- **Start Frontend Server**:
-
-  ```bash
-  pnpm dev
-  ```
-
-### Redis Server
-
-- **Start Redis Server**:
-
-  ```bash
-  redis-server
   ```
 
 ---
