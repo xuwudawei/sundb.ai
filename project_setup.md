@@ -210,11 +210,11 @@ Ensure your Conda environment is activated before running the bootstrap script.
   ```
 
 - **Run the bootstrap script to create credentials for the admin user**:
+  Admin Login Credentials will then be created and printed in your terminal.
 
   ```bash
   python bootstrap.py
   ```
-Admin Login Credentials will then be created and printed in your terminal.
 ---
 
 ## Running the Project
