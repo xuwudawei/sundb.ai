@@ -5,6 +5,7 @@ This guide will walk you through setting up the project, including configuring t
 ## Prerequisites
 
 - **Python 3.11**
+- **Conda** (for Python environment management)
 - **PostgreSQL**
 - **Redis**
 - **Node.js and pnpm (for frontend)**
@@ -30,7 +31,7 @@ This guide will walk you through setting up the project, including configuring t
    GRANT ALL PRIVILEGES ON DATABASE mydb TO myuser;
    ```
 
-3. **Install pgvector extension**:
+3. **Install `pgvector` extension**:
 
    ```bash
    cd /tmp
@@ -47,6 +48,14 @@ This guide will walk you through setting up the project, including configuring t
    ```
 
 4. **Create the `vector` extension** in your database:
+
+   Connect to your database:
+
+   ```bash
+   psql -d mydb -U myuser
+   ```
+
+   Then run:
 
    ```sql
    CREATE EXTENSION vector;
@@ -82,18 +91,44 @@ This guide will walk you through setting up the project, including configuring t
 
 ## Development Setup
 
-### 1. Install Dependencies
+### 1. Create a Conda Environment and Install Dependencies
 
-- **Install Rye** (Python environment and package management tool):
-- **Link: https://rye.astral.sh/**
+We recommend using a Conda environment to manage your project's dependencies and keep them isolated.
 
-- **Use Rye to install project dependencies**:
+- **Install Conda** if you haven't already. You can download Anaconda or Miniconda:
+
+  - **Anaconda Download:** [https://www.anaconda.com/products/individual](https://www.anaconda.com/products/individual)
+  - **Miniconda Download:** [https://docs.conda.io/en/latest/miniconda.html](https://docs.conda.io/en/latest/miniconda.html)
+
+- **Create a new Conda environment**:
 
   ```bash
-  rye sync
+  conda create -n myenv python=3.11
+  ```
+
+  Replace `myenv` with your preferred environment name.
+
+- **Activate the Conda environment**:
+
+  ```bash
+  conda activate myenv
+  ```
+
+- **Navigate to the backend directory**:
+
+  ```bash
+  cd backend
+  ```
+
+- **Install project dependencies**:
+
+  ```bash
+  pip install -r requirements.lock
   ```
 
 ### 2. Prepare Environment
+
+Ensure your Conda environment is activated before proceeding.
 
 - **Copy the example environment variables file**:
 
@@ -128,10 +163,18 @@ This guide will walk you through setting up the project, including configuring t
 
 ### 3. Run Migrations
 
-- **Navigate to the backend directory**:
+Ensure your Conda environment is activated before running migrations.
+
+- **Navigate to the backend directory** (if not already there):
 
   ```bash
   cd backend
+  ```
+
+- **Activate the Conda environment** (if not already activated):
+
+  ```bash
+  conda activate myenv
   ```
 
 - **Run database migrations**:
@@ -142,20 +185,36 @@ This guide will walk you through setting up the project, including configuring t
 
 ### 4. Run Development Server
 
+Ensure your Conda environment is activated before starting the backend server.
+
+- **Activate the Conda environment** (if not already activated):
+
+  ```bash
+  conda activate myenv
+  ```
+
 - **Start the backend server**:
 
   ```bash
-  rye run python main.py runserver
+  python main.py runserver
   ```
 
 ### 5. Create Admin User
+
+Ensure your Conda environment is activated before running the bootstrap script.
+
+- **Activate the Conda environment** (if not already activated):
+
+  ```bash
+  conda activate myenv
+  ```
 
 - **Run the bootstrap script to create credentials for the admin user**:
 
   ```bash
   python bootstrap.py
   ```
-
+Admin Login Credentials will then be created and printed in your terminal.
 ---
 
 ## Running the Project
@@ -182,19 +241,35 @@ This guide will walk you through setting up the project, including configuring t
 
 ### Backend
 
+Ensure your Conda environment is activated before starting the backend server.
+
 - **Navigate to the backend directory**:
 
   ```bash
   cd backend
   ```
 
+- **Activate the Conda environment** (if not already activated):
+
+  ```bash
+  conda activate myenv
+  ```
+
 - **Start the backend server**:
 
   ```bash
-  rye run python main.py runserver
+  python main.py runserver
   ```
 
 ### Celery Worker
+
+Ensure your Conda environment is activated before starting the Celery worker.
+
+- **Activate the Conda environment** (if not already activated):
+
+  ```bash
+  conda activate myenv
+  ```
 
 - **Start the Celery worker**:
 
@@ -203,6 +278,14 @@ This guide will walk you through setting up the project, including configuring t
   ```
 
 ### Celery Flower Monitoring
+
+Ensure your Conda environment is activated before starting Celery Flower.
+
+- **Activate the Conda environment** (if not already activated):
+
+  ```bash
+  conda activate myenv
+  ```
 
 - **Start Celery Flower to monitor tasks**:
 
@@ -217,21 +300,24 @@ This guide will walk you through setting up the project, including configuring t
 - **Environment Variables**: Ensure all required environment variables are correctly set in your `.env` file.
 - **Database Functions**: The `array_to_vector` function is crucial for vector operations in the database.
 - **Redis Server**: Make sure the Redis server is running before starting the backend to handle background tasks.
+- **Conda Environment**: Always ensure that your Conda environment is activated when working on the backend to use the correct Python packages.
 
 ---
 
 ## Quick Commands Summary
 
-- **Start Redis Server**:
+### Backend Commands (ensure Conda environment is activated)
+
+- **Activate Conda Environment**:
 
   ```bash
-  redis-server
+  conda activate myenv
   ```
 
 - **Install Dependencies**:
 
   ```bash
-  rye sync
+  pip install -r requirements.lock
   ```
 
 - **Run Migrations**:
@@ -243,13 +329,7 @@ This guide will walk you through setting up the project, including configuring t
 - **Start Backend Server**:
 
   ```bash
-  rye run python main.py runserver
-  ```
-
-- **Start Frontend Server**:
-
-  ```bash
-  pnpm dev
+  python main.py runserver
   ```
 
 - **Start Celery Worker**:
@@ -262,6 +342,34 @@ This guide will walk you through setting up the project, including configuring t
 
   ```bash
   celery -A app.celery flower --port=5555
+  ```
+
+### Frontend Commands
+
+- **Navigate to Frontend Directory**:
+
+  ```bash
+  cd frontend
+  ```
+
+- **Install Frontend Dependencies**:
+
+  ```bash
+  pnpm install
+  ```
+
+- **Start Frontend Server**:
+
+  ```bash
+  pnpm dev
+  ```
+
+### Redis Server
+
+- **Start Redis Server**:
+
+  ```bash
+  redis-server
   ```
 
 ---
