@@ -12,14 +12,20 @@ from fastapi_pagination import Params, Page
 
 from app.api.deps import SessionDep, OptionalUserDep, CurrentUserDep
 from app.repositories import chat_repo
-from app.models import Chat
-from app.rag.chat import ChatService, user_can_view_chat, get_chat_message_subgraph
+from app.models import Chat, ChatUpdate
+from app.rag.chat import (
+    ChatService,
+    user_can_view_chat,
+    user_can_edit_chat,
+    get_chat_message_subgraph,
+)
 from app.rag.types import (
     MessageRole,
     ChatMessage,
     ChatEventType,
     ChatMessageSate,
 )
+from app.exceptions import ChatNotFound
 
 router = APIRouter()
 
@@ -38,6 +44,8 @@ class ChatRequest(BaseModel):
         for m in messages:
             if m.role not in [MessageRole.USER, MessageRole.ASSISTANT]:
                 raise ValueError("role must be either 'user' or 'assistant'")
+            if not m.content:
+                raise ValueError("message content cannot be empty")
             if len(m.content) > 10000:
                 raise ValueError("message content cannot exceed 1000 characters")
         if messages[-1].role != MessageRole.USER:
@@ -52,12 +60,29 @@ def chats(
     user: OptionalUserDep,
     chat_request: ChatRequest,
 ):
+    origin = request.headers.get("Origin") or request.headers.get("Referer")
     browser_id = request.state.browser_id
-    chat_svc = ChatService(session, user, browser_id, chat_request.chat_engine)
+
+    try:
+        chat_svc = ChatService(
+            db_session=session,
+            user=user,
+            browser_id=browser_id,
+            origin=origin,
+            chat_id=chat_request.chat_id,
+            chat_messages=chat_request.messages,
+            engine_name=chat_request.chat_engine,
+        )
+    except ChatNotFound:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Chat not found")
+    except Exception as e:
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
 
     if chat_request.stream:
         return StreamingResponse(
-            chat_svc.chat(chat_request.messages, chat_request.chat_id),
+            chat_svc.chat(),
             media_type="text/event-stream",
             headers={
                 "X-Content-Type-Options": "nosniff",
@@ -66,7 +91,7 @@ def chats(
     else:
         trace, sources, content = None, [], ""
         chat_id, message_id = None, None
-        for m in chat_svc.chat(chat_request.messages, chat_request.chat_id):
+        for m in chat_svc.chat():
             if m.event_type == ChatEventType.MESSAGE_ANNOTATIONS_PART:
                 if m.payload.state == ChatMessageSate.SOURCE_NODES:
                     sources = m.payload.context
@@ -119,15 +144,28 @@ def get_chat(session: SessionDep, user: OptionalUserDep, chat_id: UUID):
     }
 
 
+@router.put("/chats/{chat_id}")
+def update_chat(
+    session: SessionDep, user: CurrentUserDep, chat_id: UUID, chat_update: ChatUpdate
+):
+    chat = chat_repo.get(session, chat_id)
+    if not chat:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Chat not found")
+
+    if not user_can_edit_chat(chat, user):
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Access denied")
+    return chat_repo.update(session, chat, chat_update)
+
+
 @router.delete("/chats/{chat_id}")
 def delete_chat(session: SessionDep, user: CurrentUserDep, chat_id: UUID):
     chat = chat_repo.get(session, chat_id)
     if not chat:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Chat not found")
-    if user.is_superuser or (chat.user_id and chat.user_id == user.id):
-        return chat_repo.delete(session, chat)
-    else:
+
+    if not user_can_edit_chat(chat, user):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Access denied")
+    return chat_repo.delete(session, chat)
 
 
 class SubgraphResponse(BaseModel):

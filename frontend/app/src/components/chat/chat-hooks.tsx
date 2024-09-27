@@ -1,7 +1,9 @@
 import { type Chat, type ChatMessage, ChatMessageRole } from '@/api/chats';
 import { isBootstrapStatusPassed } from '@/api/system';
 import { ChatController } from '@/components/chat/chat-controller';
-import { ChatMessageController, type OngoingState } from '@/components/chat/chat-message-controller';
+import { ChatMessageController, type OngoingState, type OngoingStateHistoryItem } from '@/components/chat/chat-message-controller';
+import type { AppChatStreamState } from '@/components/chat/chat-stream-state';
+import { useGtagFn } from '@/components/gtag-provider';
 import { useBootstrapStatus } from '@/components/system/BootstrapStatusProvider';
 import { useLatestRef } from '@/components/use-latest-ref';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
@@ -81,24 +83,35 @@ export function useChats () {
 export interface ChatMessageGroup {
   user: ChatMessageController;
   assistant: ChatMessageController | undefined;
+  hasFirstAssistantMessage: boolean;
 }
 
-export function useChatController (id: string | undefined, initialChat: Chat | undefined, initialMessages: ChatMessage[] | undefined) {
-  const { chats, newChat } = useChats();
+export function useChatController (
+  id: string | undefined,
+  initialChat: Chat | undefined,
+  initialMessages: ChatMessage[] | undefined,
+  inputElement: HTMLInputElement | HTMLTextAreaElement | null = null,
+) {
+  const gtagFn = useGtagFn();
+  const { chats } = useChats();
 
   // Create essential chat controller
-  const [controller, setController] = useState(() => {
+  const [controller] = useState(() => {
     if (id) {
       let controller = chats.get(id);
       if (!controller) {
-        controller = new ChatController(initialChat, initialMessages);
+        controller = new ChatController(initialChat, initialMessages, undefined, inputElement, gtagFn);
         chats.set(id, controller);
       }
       return controller;
     } else {
-      return new ChatController(undefined, undefined, undefined);
+      return new ChatController(undefined, undefined, undefined, inputElement, gtagFn);
     }
   });
+
+  useEffect(() => {
+    controller.inputElement = inputElement;
+  }, [controller, inputElement]);
 
   return controller;
 }
@@ -189,6 +202,7 @@ export function useChatMessageGroups (controllers: ChatMessageController[]) {
 function collectMessageGroups (messageControllers: ChatMessageController[]) {
   const groups: ChatMessageGroup[] = [];
 
+  let hasAssistant: boolean = false;
   let user: ChatMessageController | undefined;
 
   for (let messageController of messageControllers) {
@@ -201,7 +215,9 @@ function collectMessageGroups (messageControllers: ChatMessageController[]) {
           groups.push({
             user,
             assistant: messageController,
+            hasFirstAssistantMessage: !hasAssistant,
           });
+          hasAssistant = true;
         } else {
           console.warn('No matched user message, drop assistant message', messageController.message.id);
         }
@@ -250,7 +266,7 @@ export function useChatMessageField (controller: ChatMessageController | undefin
     } else {
       setValue(undefined);
     }
-  }, [controller]);
+  }, [controller, key]);
 
   return value;
 }
@@ -281,4 +297,45 @@ export function useChatMessageStreamState (controller: ChatMessageController | u
   }, [controller]);
 
   return state;
+}
+
+export function useChatMessageStreamHistoryStates (controller: ChatMessageController | undefined) {
+  const [state, setState] = useState(controller?.ongoingHistory);
+
+  useEffect(() => {
+    if (controller) {
+      setState(controller.ongoingHistory);
+
+      const handleUpdate = (_: any, state?: OngoingStateHistoryItem[]) => {
+        if (state) {
+          setState(state);
+        }
+      };
+
+      controller
+        .on('stream-history-update', handleUpdate)
+        .on('stream-finished', handleUpdate);
+
+      return () => {
+        controller
+          .off('stream-history-update', handleUpdate)
+          .off('stream-finished', handleUpdate);
+      };
+    } else {
+      setState(undefined);
+    }
+  }, [controller]);
+
+  return state;
+}
+
+export function useChatMessageStreamContainsState (controller: ChatMessageController | undefined, state: AppChatStreamState) {
+  const history = useChatMessageStreamHistoryStates(controller);
+  const current = useChatMessageStreamState(controller);
+
+  // FIXME: what if state not triggered?
+  if (!current || current.finished) {
+    return true;
+  }
+  return history?.some(item => item.state.state === state) || current?.state === state;
 }

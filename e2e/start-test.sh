@@ -25,7 +25,7 @@ docker compose up -d tidb
 function clean_up {
   ARG=$?
   echo -e "$TAG Cleaning up..."
-  docker compose down frontend background backend tidb redis
+  docker compose down frontend background backend tidb redis static-web-server
 
   rm -rf ${E2E_DATA_STORAGE_DIR} ${E2E_DATA_REDIS_DIR} ${E2E_DATA_TIDB_DIR} || echo "Failed to remove temp dirs."
 
@@ -48,11 +48,11 @@ echo -e "$TAG Execute bootstrap"
 docker compose run --rm backend /bin/sh -c "python bootstrap.py" > bootstrap.stdout
 
 echo -e "$TAG Extract initial username and password"
-cat bootstrap.stdout | grep IMPORTANT | sed 's/^.*email: \(.*\) and password: \(.*\),.*$/USERNAME=\1\nPASSWORD=\2/' > .credentials
+cat bootstrap.stdout | grep IMPORTANT | sed 's/^.*email: \(.*\) and password: \(.*\)$/USERNAME=\1\nPASSWORD=\2/' > .credentials
 cat .credentials
 
 echo -e "$TAG Start components"
-docker compose up -d redis frontend backend background
+docker compose up -d redis frontend backend background static-web-server
 
 echo -e "$TAG Wait until tidb.ai ready..."
 while ! curl http://127.0.0.1:3000 > /dev/null 2>/dev/null
@@ -64,8 +64,4 @@ npx playwright test ${PLAYWRIGHT_ARGS}
 
 if [ ! "${CI}" ]; then
   npx playwright show-report
-fi
-
-if [ "${VERCEL_TOKEN}" && "${CI}" && "${VERCEL_ORG_ID}" && "${VERCEL_PROJECT_ID}" ]; then
-  npx vercel deploy . --scope "${VERCEL_SCOPE}" --yes --prod
 fi

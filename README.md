@@ -9,11 +9,11 @@
 
 [![Backend Docker Image Version](https://img.shields.io/docker/v/tidbai/backend?sort=semver&arch=amd64&label=tidbai%2Fbackend&color=blue&logo=fastapi)](https://hub.docker.com/r/tidbai/backend)
 [![Frontend Docker Image Version](https://img.shields.io/docker/v/tidbai/frontend?sort=semver&arch=amd64&label=tidbai%2Ffrontend&&color=blue&logo=next.js)](https://hub.docker.com/r/tidbai/frontend)
-[![E2E Status](https://img.shields.io/github/check-runs/pingcap/tidb.ai/main?nameFilter=E2E%20Test&label=e2e)](https://github.com/pingcap/tidb.ai/actions/workflows/release.yml)
+[![E2E Status](https://img.shields.io/github/check-runs/pingcap/tidb.ai/main?nameFilter=E2E%20Test&label=e2e)](https://tidb-ai-playwright.vercel.app/)
 
 ## Introduction
 
-A open source alternative of Kapa.ai, conversational search tool based on GraphRAG (Knowledge Graph) built on top of [TiDB Vector](https://tidb.cloud/ai) and [LlamaIndex](https://github.com/run-llama/llama_index) and [DSPy](https://github.com/stanfordnlp/dspy).
+An open source GraphRAG (Knowledge Graph) built on top of [TiDB Vector](https://tidb.cloud/ai) and [LlamaIndex](https://github.com/run-llama/llama_index) and [DSPy](https://github.com/stanfordnlp/dspy).
 
 - **Live Demo**: [TiDB.AI](https://tidb.cloud/?utm_source=github&utm_medium=tidb.ai)
 - **Documentation**: [Docs](https://tidb.ai/docs/?utm_source=github&utm_medium=tidb.ai)
@@ -34,7 +34,7 @@ A open source alternative of Kapa.ai, conversational search tool based on GraphR
 
 ## Deploy
 
-- [Deploy with Docker Compose](https://tidb.ai/docs/deploy-with-docker)
+- [Deploy with Docker Compose](https://tidb.ai/docs/deploy-with-docker) (with: 4 CPU cores and 8GB RAM)
 
 ## Tech Stack
 

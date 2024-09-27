@@ -6,14 +6,15 @@ services:
     restart: always
     volumes:
       - ./redis-data:/data
+    command: ["redis-server", "--loglevel", "warning"]
 
   backend:
-    image: tidbai/backend:0.1
+    image: tidbai/backend:0.2.7
     restart: always
     depends_on:
       - redis
     ports:
-      - "5000:80"
+      - "8000:80"
     env_file:
       - .env
     volumes:
@@ -25,7 +26,7 @@ services:
         max-file: "6"
 
   frontend:
-    image: tidbai/frontend:0.1
+    image: tidbai/frontend:0.2.7
     restart: always
     depends_on:
       - backend
@@ -40,7 +41,7 @@ services:
         max-file: "6"
 
   background:
-    image: tidbai/backend:0.1
+    image: tidbai/backend:0.2.7
     restart: always
     depends_on:
       - redis
@@ -56,3 +57,23 @@ services:
       options:
         max-size: "50m"
         max-file: "6"
+
+  local-embedding-reranker:
+    image: tidbai/local-embedding-reranker:v2
+    ports:
+      - 5001:5001
+    # If you are in China, you can uncomment the following environment to speed up the download of models
+    # environment:
+    #   - HF_ENDPOINT=https://hf-mirror.com
+    volumes:
+      - ./local-embedding-reranker:/root/.cache/huggingface
+    # If you are using NVIDIA GPU, you can uncomment the following lines to enable GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    profiles:
+      - local-embedding-reranker

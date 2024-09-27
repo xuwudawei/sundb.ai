@@ -1,4 +1,4 @@
-import { authenticationHeaders, BASE_URL, buildUrlParams, handleErrors, handleResponse, type Page, type PageParams, zodPage } from '@/lib/request';
+import { authenticationHeaders, handleErrors, handleResponse, type Page, type PageParams, requestUrl, zodPage } from '@/lib/request';
 import { zodJsonDate } from '@/lib/zod';
 import { z, type ZodType } from 'zod';
 
@@ -18,6 +18,8 @@ export interface ChatEngine {
 export interface ChatEngineOptions {
   knowledge_graph: ChatEngineKnowledgeGraphOptions;
   llm: ChatEngineLLMOptions;
+  post_verification_url?: string | null;
+  post_verification_token?: string | null;
 }
 
 export interface ChatEngineKnowledgeGraphOptions {
@@ -39,7 +41,7 @@ export type ChatEngineLLMOptions = {
   // provider: string;
   // reranker_provider: string;
   // reranker_top_k: number;
-} & Record<`${string}_chat_model`, string | undefined>
+}
 
 const kgOptionsSchema = z.object({
   depth: z.number(),
@@ -64,6 +66,8 @@ const llmOptionsSchema =
 const chatEngineOptionsSchema = z.object({
   knowledge_graph: kgOptionsSchema,
   llm: llmOptionsSchema,
+  post_verification_url: z.string().nullable().optional(),
+  post_verification_token: z.string().nullable().optional(),
 }) satisfies ZodType<ChatEngineOptions, any, any>;
 
 const chatEngineSchema = z.object({
@@ -80,21 +84,21 @@ const chatEngineSchema = z.object({
 }) satisfies ZodType<ChatEngine, any, any>;
 
 export async function listChatEngines ({ page = 1, size = 10 }: PageParams = {}): Promise<Page<ChatEngine>> {
-  return await fetch(BASE_URL + '/api/v1/admin/chat-engines' + '?' + buildUrlParams({ page, size }), {
+  return await fetch(requestUrl('/api/v1/admin/chat-engines', { page, size }), {
     headers: await authenticationHeaders(),
   })
     .then(handleResponse(zodPage(chatEngineSchema)));
 }
 
 export async function getChatEngine (id: number): Promise<ChatEngine> {
-  return await fetch(BASE_URL + `/api/v1/admin/chat-engines/${id}`, {
+  return await fetch(requestUrl(`/api/v1/admin/chat-engines/${id}`), {
     headers: await authenticationHeaders(),
   })
     .then(handleResponse(chatEngineSchema));
 }
 
 export async function updateChatEngine (id: number, partial: Partial<Pick<ChatEngine, 'name' | 'llm_id' | 'fast_llm_id' | 'reranker_id' | 'engine_options' | 'is_default'>>): Promise<void> {
-  await fetch(BASE_URL + `/api/v1/admin/chat-engines/${id}`, {
+  await fetch(requestUrl(`/api/v1/admin/chat-engines/${id}`), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -106,7 +110,7 @@ export async function updateChatEngine (id: number, partial: Partial<Pick<ChatEn
 }
 
 export async function createChatEngine (create: Pick<ChatEngine, 'name' | 'llm_id' | 'fast_llm_id' | 'engine_options'>) {
-  return await fetch(BASE_URL + `/api/v1/admin/chat-engines`, {
+  return await fetch(requestUrl(`/api/v1/admin/chat-engines`), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -118,7 +122,7 @@ export async function createChatEngine (create: Pick<ChatEngine, 'name' | 'llm_i
 }
 
 export async function deleteChatEngine (id: number): Promise<void> {
-  await fetch(BASE_URL + `/api/v1/admin/chat-engines/${id}`, {
+  await fetch(requestUrl(`/api/v1/admin/chat-engines/${id}`), {
     method: 'DELETE',
     headers: {
       ...await authenticationHeaders(),

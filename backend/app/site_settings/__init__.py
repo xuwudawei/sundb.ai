@@ -2,6 +2,7 @@ import time
 import threading
 import logging
 from sqlmodel import Session, select
+from datetime import datetime, UTC
 
 from app.models import SiteSetting as DBSiteSetting
 from app.core.db import engine
@@ -46,13 +47,13 @@ class SiteSettingProxy:
     __mutex = threading.Lock()
 
     def update_db_cache(self, force_check=False):
-        # Check if we need to update the cache every 10 seconds,
+        # Check if we need to update the cache every 6 seconds,
         # so it means settings will not be updated in real-time
         # which is acceptable for this project.
         # If we need real-time updates in the future, we can use
         # a message queue or a pub/sub system to notify the app.
         now = time.time()
-        if force_check or (now - self.__last_checked_at_ts > 10):
+        if force_check or (now - self.__last_checked_at_ts > 6):
             self.__last_checked_at_ts = now
             with Session(engine) as session:
                 last_updated_at_ts = get_db_last_updated_at(session)
@@ -76,7 +77,7 @@ class SiteSettingProxy:
             default_setting = getattr(default_settings, name)
             self.update_db_cache()
             db_value = self.__db_cache.get(name)
-            return db_value if db_value else default_setting.default
+            return db_value if db_value is not None else default_setting.default
         else:
             raise AttributeError(f"Setting {name} does not exist.")
 
@@ -92,7 +93,7 @@ class SiteSettingProxy:
                 result[default_setting.name] = SettingValue(
                     name=default_setting.name,
                     default=default_setting.default,
-                    value=db_value if db_value else default_setting.default,
+                    value=db_value if db_value is not None else default_setting.default,
                     data_type=default_setting.data_type,
                     description=default_setting.description,
                     group=default_setting.group,

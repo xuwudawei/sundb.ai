@@ -16,6 +16,7 @@ from sqlmodel import (
 )
 # from tidb_vector.sqlalchemy import VectorType
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import Index
 
 
 class EntityType(str, enum.Enum):
@@ -44,6 +45,7 @@ class Entity(EntityBase, table=True):
     )
 
     __tablename__ = "entities"
+    __table_args__ = (Index("idx_entity_type", "entity_type"),)
 
     def __hash__(self):
         return hash(self.id)

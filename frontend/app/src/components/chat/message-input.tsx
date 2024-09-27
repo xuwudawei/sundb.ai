@@ -7,15 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import isHotkey from 'is-hotkey';
-import { ArrowRightIcon } from 'lucide-react';
-import { type ChangeEvent, type RefObject, useCallback, useRef, useState } from 'react';
+import { ArrowUpIcon } from 'lucide-react';
+import { type ChangeEvent, type Ref, useCallback, useRef, useState } from 'react';
 import TextareaAutosize, { type TextareaAutosizeProps } from 'react-textarea-autosize';
 import useSWR from 'swr';
 
 export interface MessageInputProps {
   className?: string,
   disabled?: boolean,
-  inputRef?: RefObject<HTMLTextAreaElement>,
+  actionDisabled?: boolean,
+  inputRef?: Ref<HTMLTextAreaElement>,
   inputProps?: TextareaAutosizeProps,
   engine?: string,
   onEngineChange?: (name: string) => void,
@@ -24,6 +25,7 @@ export interface MessageInputProps {
 export function MessageInput ({
   className,
   disabled,
+  actionDisabled,
   inputRef,
   inputProps,
   engine,
@@ -31,12 +33,10 @@ export function MessageInput ({
 }: MessageInputProps) {
   const auth = useAuth();
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const [empty, setEmpty] = useState(true);
 
   const onChangeRef = useRef(inputProps?.onChange);
   onChangeRef.current = inputProps?.onChange;
   const handleChange = useCallback((ev: ChangeEvent<HTMLTextAreaElement>) => {
-    setEmpty(!ev.currentTarget.value.trim());
     onChangeRef.current?.(ev);
   }, []);
 
@@ -48,7 +48,7 @@ export function MessageInput ({
       <TextareaAutosize
         placeholder="Input your question here..."
         onKeyDown={e => {
-          if (!e.nativeEvent.isComposing && isHotkey('mod+Enter', e) && !disabled) {
+          if (!e.nativeEvent.isComposing && isHotkey('mod+Enter', e) && !actionDisabled) {
             e.preventDefault();
             buttonRef.current?.click();
           }
@@ -74,8 +74,8 @@ export function MessageInput ({
           ))}
         </SelectContent>
       </Select>}
-      <Button size="icon" className="rounded-full flex-shrink-0 w-8 h-8 p-2" disabled={empty || disabled} ref={buttonRef}>
-        <ArrowRightIcon className="w-full h-full" />
+      <Button size="icon" className="rounded-full flex-shrink-0 w-8 h-8 p-2" disabled={actionDisabled || disabled} ref={buttonRef}>
+        <ArrowUpIcon className="w-full h-full" />
       </Button>
     </div>
   );

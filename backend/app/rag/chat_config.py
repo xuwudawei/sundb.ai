@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from typing import Optional
 
@@ -10,10 +11,14 @@ from llama_index.llms.openai import OpenAI
 from llama_index.llms.openai_like import OpenAILike
 from llama_index.llms.gemini import Gemini
 from llama_index.llms.bedrock import Bedrock
+from llama_index.llms.ollama import Ollama
 from llama_index.core.llms.llm import LLM
 from llama_index.core.base.embeddings.base import BaseEmbedding
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.embeddings.jinaai import JinaEmbedding
+from llama_index.embeddings.cohere import CohereEmbedding
+from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.postprocessor.jinaai_rerank import JinaRerank
 from llama_index.postprocessor.cohere_rerank import CohereRerank
 from sqlmodel import Session, select
@@ -22,6 +27,9 @@ from google.auth.transport.requests import Request
 
 from app.rag.node_postprocessor import MetadataPostFilter
 from app.rag.node_postprocessor.metadata_post_filter import MetadataFilters
+from app.rag.node_postprocessor.baisheng_reranker import BaishengRerank
+from app.rag.node_postprocessor.local_reranker import LocalRerank
+from app.rag.embeddings.local_embedding import LocalEmbedding
 from app.types import LLMProvider, EmbeddingProvider, RerankerProvider
 from app.rag.default_prompt import (
     DEFAULT_INTENT_GRAPH_KNOWLEDGE,
@@ -68,6 +76,8 @@ class ChatEngineConfig(BaseModel):
     llm: LLMOption = LLMOption()
     knowledge_graph: KnowledgeGraphOption = KnowledgeGraphOption()
     vector_search: VectorSearchOption = VectorSearchOption()
+    post_verification_url: Optional[str] = None
+    post_verification_token: Optional[str] = None
 
     _db_chat_engine: Optional[DBChatEngine] = None
     _db_llm: Optional[DBLLM] = None
@@ -88,7 +98,7 @@ class ChatEngineConfig(BaseModel):
             logger.warning(
                 f"Chat engine {engine_name} not found in DB, using default engine"
             )
-            return cls()
+            db_chat_engine = chat_engine_repo.get_default_engine(session)
 
         obj = cls.model_validate(db_chat_engine.engine_options)
         obj._db_chat_engine = db_chat_engine
@@ -140,13 +150,14 @@ class ChatEngineConfig(BaseModel):
         return get_metadata_post_filter(self.vector_search.metadata_post_filters)
 
     def screenshot(self) -> dict:
-        return self.model_dump_json(
+        return self.model_dump(
             exclude={
                 "llm": [
                     "condense_question_prompt",
                     "text_qa_prompt",
                     "refine_prompt",
-                ]
+                ],
+                "post_verification_token": True,
             }
         )
 
@@ -207,6 +218,10 @@ def get_llm(
             if "max_tokens" not in config:
                 config.update(max_tokens=4096)
             return AnthropicVertex(model=model, credentials=google_creds, **config)
+        case LLMProvider.OLLAMA:
+            config.setdefault("request_timeout", 60 * 10)
+            config.setdefault("context_window", 4096)
+            return Ollama(model=model, **config)
         case _:
             raise ValueError(f"Got unknown LLM provider: {provider}")
 
@@ -238,6 +253,27 @@ def get_embedding_model(
                 model=model,
                 api_base=api_base,
                 api_key=credentials,
+                **config,
+            )
+        case EmbeddingProvider.JINA:
+            return JinaEmbedding(
+                model=model,
+                api_key=credentials,
+                **config,
+            )
+        case EmbeddingProvider.COHERE:
+            return CohereEmbedding(
+                model_name=model,
+                cohere_api_key=credentials,
+            )
+        case EmbeddingProvider.OLLAMA:
+            return OllamaEmbedding(
+                model_name=model,
+                **config,
+            )
+        case EmbeddingProvider.LOCAL:
+            return LocalEmbedding(
+                model=model,
                 **config,
             )
         case _:
@@ -277,6 +313,19 @@ def get_reranker_model(
                 model=model,
                 top_n=top_n,
                 api_key=credentials,
+            )
+        case RerankerProvider.BAISHENG:
+            return BaishengRerank(
+                model=model,
+                top_n=top_n,
+                api_key=credentials,
+                **config,
+            )
+        case RerankerProvider.LOCAL:
+            return LocalRerank(
+                model=model,
+                top_n=top_n,
+                **config,
             )
         case _:
             raise ValueError(f"Got unknown reranker provider: {provider}")

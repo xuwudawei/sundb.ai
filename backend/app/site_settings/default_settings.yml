@@ -79,12 +79,12 @@ custom_js:
     description: "The button label on the custom_js."
     client: true
   custom_js_button_img_src:
-    default: "https://tidb.ai/tidb-ai.svg"
+    default: "https://tidb.ai/tidb-ai-widget.svg"
     data_type: str
     description: "The button image on the custom_js."
     client: true
   custom_js_logo_src:
-    default: "https://tidb.ai/tidb-ai-light.svg"
+    default: "https://tidb.ai/tidb-ai-widget.svg"
     data_type: str
     description: "The logo on the custom_js."
     client: true
@@ -105,3 +105,13 @@ chat:
     data_type: str
     description: "The host of Langfuse."
     client: false
+  enable_post_verifications:
+    default: true
+    data_type: bool
+    description: "Enable post verification for all chats."
+    client: true
+  enable_post_verifications_for_widgets:
+    default: false
+    data_type: bool
+    description: "Enable post verification for chats from js widgets."
+    client: true

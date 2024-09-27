@@ -1,16 +1,20 @@
+import time
 import logging
 from uuid import UUID
 from typing import List, Generator, Optional, Tuple
 from datetime import datetime, UTC
+from urllib.parse import urljoin
 
+import requests
 import jinja2
 from sqlmodel import Session, select, func
-from llama_index.core import VectorStoreIndex, ServiceContext
+from llama_index.core import VectorStoreIndex
 from llama_index.core.base.llms.base import ChatMessage
 from llama_index.core.prompts.base import PromptTemplate
 from llama_index.core.base.response.schema import StreamingResponse
 from llama_index.core.callbacks.schema import EventPayload
 from llama_index.core.callbacks import CallbackManager
+from llama_index.core.response_synthesizers import get_response_synthesizer
 from langfuse import Langfuse
 from langfuse.llama_index import LlamaIndexCallbackHandler
 
@@ -18,6 +22,7 @@ from app.models import (
     User,
     Document,
     Chunk,
+    ChatVisibility,
     Chat as DBChat,
     ChatMessage as DBChatMessage,
     LLM as DBLLM,
@@ -32,7 +37,10 @@ from app.rag.chat_stream_protocol import (
     ChatEvent,
 )
 from app.rag.vector_store.tidb_vector_store import TiDBVectorStore
-from app.rag.knowledge_graph.graph_store import TiDBGraphStore
+from app.rag.knowledge_graph.graph_store import (
+    TiDBGraphStore,
+    tidb_graph_editor as editor,
+)
 from app.rag.knowledge_graph import KnowledgeGraphIndex
 from app.rag.chat_config import ChatEngineConfig, get_default_embedding_model
 from app.rag.types import (
@@ -43,6 +51,7 @@ from app.rag.types import (
 )
 from app.repositories import chat_repo
 from app.site_settings import SiteSetting
+from app.exceptions import ChatNotFound
 
 logger = logging.getLogger(__name__)
 
@@ -50,25 +59,74 @@ logger = logging.getLogger(__name__)
 class ChatService:
     def __init__(
         self,
+        *,
         db_session: Session,
         user: User,
         browser_id: str,
+        origin: str,
+        chat_messages: List[ChatMessage],
         engine_name: str = "default",
+        chat_id: Optional[UUID] = None,
     ) -> None:
         self.db_session = db_session
         self.user = user
         self.browser_id = browser_id
         self.engine_name = engine_name
 
+        self.user_question, self.chat_history = self._parse_chat_messages(chat_messages)
         self.chat_engine_config = ChatEngineConfig.load_from_db(db_session, engine_name)
         self.db_chat_engine = self.chat_engine_config.get_db_chat_engine()
+
+        if chat_id:
+            # FIXME:
+            #   only chat owner or superuser can access the chat,
+            #   anonymous user can only access anonymous chat by track_id
+            self.db_chat_obj = chat_repo.get(self.db_session, chat_id)
+            if not self.db_chat_obj:
+                raise ChatNotFound()
+            self.chat_history = [
+                ChatMessage(role=m.role, content=m.content, additional_kwargs={})
+                for m in chat_repo.get_messages(self.db_session, self.db_chat_obj)
+            ]
+        else:
+            self.db_chat_obj = chat_repo.create(
+                self.db_session,
+                DBChat(
+                    title=self.user_question[:100],
+                    engine_id=self.db_chat_engine.id,
+                    engine_options=self.chat_engine_config.screenshot(),
+                    user_id=self.user.id if self.user else None,
+                    browser_id=self.browser_id,
+                    origin=origin,
+                    visibility=ChatVisibility.PUBLIC.value
+                    if not self.user
+                    else ChatVisibility.PRIVATE.value,
+                ),
+            )
+            chat_id = self.db_chat_obj.id
+            # slack/discord may create a new chat with history messages
+            now = datetime.now(UTC)
+            for i, m in enumerate(self.chat_history):
+                chat_repo.create_message(
+                    session=self.db_session,
+                    chat=self.db_chat_obj,
+                    chat_message=DBChatMessage(
+                        role=m.role,
+                        content=m.content,
+                        ordinal=i + 1,
+                        created_at=now,
+                        updated_at=now,
+                        finished_at=now,
+                    ),
+                )
+
         self._reranker = self.chat_engine_config.get_reranker(db_session)
         self._metadata_filter = self.chat_engine_config.get_metadata_filter()
         if self._reranker:
             self._node_postprocessors = [self._metadata_filter, self._reranker]
             # Set initial similarity_top_k to a large number,
             # reranker will filter out irrelevant nodes after the retrieval
-            self._similarity_top_k = 100
+            self._similarity_top_k = 60
         else:
             self._node_postprocessors = [self._metadata_filter]
             self._similarity_top_k = 10
@@ -80,11 +138,9 @@ class ChatService:
             self.langfuse_host and self.langfuse_secret_key and self.langfuse_public_key
         )
 
-    def chat(
-        self, chat_messages: List[ChatMessage], chat_id: Optional[UUID] = None
-    ) -> Generator[ChatEvent, None, None]:
+    def chat(self) -> Generator[ChatEvent, None, None]:
         try:
-            for event in self._chat(chat_messages, chat_id):
+            for event in self._chat():
                 yield event
         except Exception as e:
             logger.exception(e)
@@ -93,50 +149,7 @@ class ChatService:
                 payload="Encountered an error while processing the chat. Please try again later.",
             )
 
-    def _chat(
-        self, chat_messages: List[ChatMessage], chat_id: Optional[UUID] = None
-    ) -> Generator[ChatEvent, None, None]:
-        user_question, chat_history = self._parse_chat_messages(chat_messages)
-
-        if chat_id:
-            # FIXME:
-            #   only chat owner or superuser can access the chat,
-            #   anonymous user can only access anonymous chat by track_id
-            self.db_chat_obj = chat_repo.get(self.db_session, chat_id)
-            if not self.db_chat_obj:
-                yield ChatEvent(
-                    event_type=ChatEventType.ERROR_PART,
-                    payload="Chat not found",
-                )
-                return
-            chat_history = [
-                ChatMessage(role=m.role, content=m.content, additional_kwargs={})
-                for m in chat_repo.get_messages(self.db_session, self.db_chat_obj)
-            ]
-        else:
-            self.db_chat_obj = chat_repo.create(
-                self.db_session,
-                DBChat(
-                    title=user_question[:100],
-                    engine_id=self.db_chat_engine.id,
-                    engine_options=self.chat_engine_config.screenshot(),
-                    user_id=self.user.id if self.user else None,
-                    browser_id=self.browser_id,
-                ),
-            )
-            chat_id = self.db_chat_obj.id
-            # slack/discord may create a new chat with history messages
-            for i, m in enumerate(chat_history):
-                chat_repo.create_message(
-                    session=self.db_session,
-                    chat=self.db_chat_obj,
-                    chat_message=DBChatMessage(
-                        role=m.role,
-                        content=m.content,
-                        ordinal=i + 1,
-                    ),
-                )
-
+    def _chat(self) -> Generator[ChatEvent, None, None]:
         if self.enable_langfuse:
             langfuse = Langfuse(
                 host=self.langfuse_host,
@@ -154,8 +167,8 @@ class ChatService:
                 tags=[f"chat_engine:{self.engine_name}"],
                 release=settings.ENVIRONMENT,
                 input={
-                    "user_question": user_question,
-                    "chat_history": chat_history,
+                    "user_question": self.user_question,
+                    "chat_history": self.chat_history,
                 },
             )
             trace_id = observation.trace_id
@@ -169,7 +182,8 @@ class ChatService:
             chat=self.db_chat_obj,
             chat_message=DBChatMessage(
                 role=MessageRole.USER.value,
-                content=user_question,
+                trace_url=trace_url,
+                content=self.user_question,
             ),
         )
         db_assistant_message = chat_repo.create_message(
@@ -218,17 +232,8 @@ class ChatService:
                 assistant_message=db_assistant_message,
             ),
         )
-        yield ChatEvent(
-            event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
-            payload=ChatStreamMessagePayload(
-                state=ChatMessageSate.TRACE,
-                display="Start knowledge graph searching ...",
-                context={"langfuse_url": trace_url},
-            ),
-        )
 
         # 1. Retrieve entities, relations, and chunks from the knowledge graph
-        callback_manager = _get_llamaindex_callback_manager()
         kg_config = self.chat_engine_config.knowledge_graph
         if kg_config.enabled:
             graph_store = TiDBGraphStore(
@@ -239,30 +244,43 @@ class ChatService:
             graph_index: KnowledgeGraphIndex = KnowledgeGraphIndex.from_existing(
                 dspy_lm=_fast_dspy_lm,
                 kg_store=graph_store,
-                callback_manager=callback_manager,
+                callback_manager=_get_llamaindex_callback_manager(),
             )
 
             if kg_config.using_intent_search:
-                with callback_manager.as_trace("retrieve_with_weight"):
-                    with callback_manager.event(
-                        MyCBEventType.RETRIEVE_FROM_GRAPH,
-                        payload={
-                            EventPayload.QUERY_STR: {
-                                "query": user_question,
-                                "chat_history": chat_history,
-                            }
-                        },
-                    ) as event:
-                        result = graph_index.intent_based_search(
-                            user_question,
-                            chat_history,
-                            include_meta=True,
-                            relationship_meta_filters=kg_config.relationship_meta_filters,
-                        )
-                        event.on_end(payload={"graph": result["queries"]})
+                yield ChatEvent(
+                    event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
+                    payload=ChatStreamMessagePayload(
+                        state=ChatMessageSate.KG_RETRIEVAL,
+                        display="Identifying Your Question's Core Intents",
+                    ),
+                )
+                graph_index._callback_manager = _get_llamaindex_callback_manager()
+                sub_queries = graph_index.intent_analyze(
+                    self.user_question,
+                    self.chat_history,
+                )
+                yield ChatEvent(
+                    event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
+                    payload=ChatStreamMessagePayload(
+                        state=ChatMessageSate.TRACE,
+                        display="Searching the Knowledge Graph for Relevant Context",
+                        context={"langfuse_url": trace_url},
+                    ),
+                )
+                graph_index._callback_manager = _get_llamaindex_callback_manager()
+                result = graph_index.graph_semantic_search(
+                    sub_queries,
+                    include_meta=True,
+                    relationship_meta_filters=kg_config.relationship_meta_filters,
+                )
 
                 entities = result["graph"]["entities"]
                 relations = result["graph"]["relationships"]
+                graph_data_source_ids = {
+                    "entities": [e["id"] for e in entities],
+                    "relationships": [r["id"] for r in relations],
+                }
 
                 graph_knowledges = get_prompt_by_jinja2_template(
                     self.chat_engine_config.llm.intent_graph_knowledge,
@@ -270,8 +288,17 @@ class ChatService:
                 )
                 graph_knowledges_context = graph_knowledges.template
             else:
+                yield ChatEvent(
+                    event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
+                    payload=ChatStreamMessagePayload(
+                        state=ChatMessageSate.TRACE,
+                        display="Searching the Knowledge Graph for Relevant Context",
+                        context={"langfuse_url": trace_url},
+                    ),
+                )
+                graph_index._callback_manager = _get_llamaindex_callback_manager()
                 entities, relations, chunks = graph_index.retrieve_with_weight(
-                    user_question,
+                    self.user_question,
                     [],
                     depth=kg_config.depth,
                     include_meta=kg_config.include_meta,
@@ -279,6 +306,10 @@ class ChatService:
                     relationship_meta_filters=kg_config.relationship_meta_filters,
                     with_chunks=False,
                 )
+                graph_data_source_ids = {
+                    "entities": [e["id"] for e in entities],
+                    "relationships": [r["id"] for r in relations],
+                }
                 graph_knowledges = get_prompt_by_jinja2_template(
                     self.chat_engine_config.llm.normal_graph_knowledge,
                     entities=entities,
@@ -287,6 +318,7 @@ class ChatService:
                 graph_knowledges_context = graph_knowledges.template
         else:
             entities, relations, chunks = [], [], []
+            graph_data_source_ids = {}
             graph_knowledges_context = ""
 
         # 2. Refine the user question using graph information and chat history
@@ -294,24 +326,31 @@ class ChatService:
             event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
             payload=ChatStreamMessagePayload(
                 state=ChatMessageSate.REFINE_QUESTION,
-                display="Refine the user question ...",
+                display="Query Rewriting for Enhanced Information Retrieval",
             ),
         )
         callback_manager = _get_llamaindex_callback_manager()
         with callback_manager.as_trace("condense_question"):
             with callback_manager.event(
                 MyCBEventType.CONDENSE_QUESTION,
-                payload={EventPayload.QUERY_STR: user_question},
+                payload={EventPayload.QUERY_STR: self.user_question},
             ) as event:
                 refined_question = _fast_llm.predict(
                     get_prompt_by_jinja2_template(
                         self.chat_engine_config.llm.condense_question_prompt,
                         graph_knowledges=graph_knowledges_context,
-                        chat_history=chat_history,
-                        question=user_question,
+                        chat_history=self.chat_history,
+                        question=self.user_question,
                     ),
                 )
                 event.on_end(payload={EventPayload.COMPLETION: refined_question})
+        yield ChatEvent(
+            event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
+            payload=ChatStreamMessagePayload(
+                state=ChatMessageSate.REFINE_QUESTION,
+                message=refined_question,
+            ),
+        )
 
         # 3. Retrieve the related chunks from the vector store
         # 4. Rerank after the retrieval
@@ -320,37 +359,44 @@ class ChatService:
             event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
             payload=ChatStreamMessagePayload(
                 state=ChatMessageSate.SEARCH_RELATED_DOCUMENTS,
-                display="Search related documents ...",
+                display="Retrieving and Reranking the Best-Matching Data"
+                if self._reranker
+                else "Retrieving the Most Relevant Data",
             ),
         )
         callback_manager = _get_llamaindex_callback_manager()
         text_qa_template = get_prompt_by_jinja2_template(
             self.chat_engine_config.llm.text_qa_prompt,
             graph_knowledges=graph_knowledges_context,
+            original_question=self.user_question,
         )
         refine_template = get_prompt_by_jinja2_template(
             self.chat_engine_config.llm.refine_prompt,
             graph_knowledges=graph_knowledges_context,
-        )
-        service_context = ServiceContext.from_defaults(
-            llm=_llm,
-            embed_model=_embed_model,
-            callback_manager=callback_manager,
+            original_question=self.user_question,
         )
         vector_store = TiDBVectorStore(session=self.db_session)
         vector_index = VectorStoreIndex.from_vector_store(
             vector_store,
-            service_context=service_context,
+            embed_model=_embed_model,
+            callback_manager=callback_manager,
+        )
+        response_synthesizer = get_response_synthesizer(
+            llm=_llm,
+            text_qa_template=text_qa_template,
+            refine_template=refine_template,
+            streaming=True,
+            callback_manager=callback_manager,
         )
         query_engine = vector_index.as_query_engine(
             llm=_llm,
+            response_synthesizer=response_synthesizer,
             node_postprocessors=self._node_postprocessors,
-            streaming=True,
-            text_qa_template=text_qa_template,
-            refine_template=refine_template,
             similarity_top_k=self._similarity_top_k,
-            service_context=service_context,
         )
+        query_engine.callback_manager = callback_manager
+        for _np in self._node_postprocessors:
+            _np.callback_manager = callback_manager
         response: StreamingResponse = query_engine.query(refined_question)
         source_documents = self._get_source_documents(response)
 
@@ -359,6 +405,13 @@ class ChatService:
             payload=ChatStreamMessagePayload(
                 state=ChatMessageSate.SOURCE_NODES,
                 context=source_documents,
+            ),
+        )
+        yield ChatEvent(
+            event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
+            payload=ChatStreamMessagePayload(
+                state=ChatMessageSate.GENERATE_ANSWER,
+                display="Generating a Precise Answer with AI",
             ),
         )
 
@@ -370,12 +423,8 @@ class ChatService:
                 payload=word,
             )
 
-        db_assistant_message.sources = source_documents
-        db_assistant_message.content = response_text
-        db_assistant_message.updated_at = datetime.now(UTC)
-        db_assistant_message.finished_at = datetime.now(UTC)
-        self.db_session.add(db_assistant_message)
-        self.db_session.commit()
+        if not response_text:
+            raise Exception("Got empty response from LLM")
 
         yield ChatEvent(
             event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
@@ -383,6 +432,26 @@ class ChatService:
                 state=ChatMessageSate.FINISHED,
             ),
         )
+
+        post_verification_result_url = self._post_verification(
+            self.user_question,
+            response_text,
+            self.db_chat_obj.id,
+            db_assistant_message.id,
+        )
+
+        db_assistant_message.sources = source_documents
+        db_assistant_message.graph_data = graph_data_source_ids
+        db_assistant_message.content = response_text
+        db_assistant_message.post_verification_result_url = post_verification_result_url
+        db_assistant_message.updated_at = datetime.now(UTC)
+        db_assistant_message.finished_at = datetime.now(UTC)
+        self.db_session.add(db_assistant_message)
+        db_user_message.graph_data = graph_data_source_ids
+        db_user_message.updated_at = datetime.now(UTC)
+        db_user_message.finished_at = datetime.now(UTC)
+        self.db_session.add(db_user_message)
+        self.db_session.commit()
 
         yield ChatEvent(
             event_type=ChatEventType.DATA_PART,
@@ -402,28 +471,68 @@ class ChatService:
 
     def _get_source_documents(self, response: StreamingResponse) -> List[dict]:
         source_nodes_ids = [s_n.node_id for s_n in response.source_nodes]
-        stmt = select(
-            Document.id,
-            Document.name,
-            Document.source_uri,
-        ).where(
-            Document.id.in_(
-                select(
-                    Chunk.document_id,
-                ).where(
-                    Chunk.id.in_(source_nodes_ids),
-                )
-            ),
+        stmt = (
+            select(
+                Chunk.id,
+                Document.id,
+                Document.name,
+                Document.source_uri,
+            )
+            .outerjoin(Document, Chunk.document_id == Document.id)
+            .where(
+                Chunk.id.in_(source_nodes_ids),
+            )
         )
-        source_documents = [
-            {
-                "id": doc_id,
-                "name": doc_name,
-                "source_uri": source_uri,
-            }
-            for doc_id, doc_name, source_uri in self.db_session.execute(stmt).all()
-        ]
+        source_chunks = self.db_session.execute(stmt).all()
+        # Sort the source chunks based on the order of the source_nodes_ids, which are arranged according to their related scores.
+        source_chunks = sorted(
+            source_chunks, key=lambda x: source_nodes_ids.index(str(x[0]))
+        )
+        source_documents = []
+        source_documents_ids = []
+        for s in source_chunks:
+            if s[1] not in source_documents_ids:
+                source_documents_ids.append(s[1])
+                source_documents.append(
+                    {
+                        "id": s[1],
+                        "name": s[2],
+                        "source_uri": s[3],
+                    }
+                )
         return source_documents
+
+    def _post_verification(
+        self, user_question: str, response_text: str, chat_id: UUID, message_id: int
+    ) -> Optional[str]:
+        # post verification to external service, will return the post verification result url
+        post_verification_url = self.chat_engine_config.post_verification_url
+        post_verification_token = self.chat_engine_config.post_verification_token
+
+        if not post_verification_url:
+            return
+
+        external_request_id = f"{chat_id}_{message_id}"
+        qa_content = f"User question: {user_question}\n\nAnswer:\n{response_text}"
+        try:
+            resp = requests.post(
+                post_verification_url,
+                json={
+                    "external_request_id": external_request_id,
+                    "qa_content": qa_content,
+                },
+                headers={
+                    "Authorization": f"Bearer {post_verification_token}",
+                }
+                if post_verification_token
+                else {},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            job_id = resp.json()["job_id"]
+            return urljoin(f"{post_verification_url}/", str(job_id))
+        except Exception:
+            logger.exception("Failed to post verification")
 
 
 def get_prompt_by_jinja2_template(template_string: str, **kwargs) -> PromptTemplate:
@@ -451,11 +560,67 @@ def get_prompt_by_jinja2_template(template_string: str, **kwargs) -> PromptTempl
 
 
 def user_can_view_chat(chat: DBChat, user: Optional[User]) -> bool:
-    # Anonymous chat can be accessed by anyone
-    # Chat with owner can only be accessed by owner or superuser
-    if chat.user_id and not (user and (user.is_superuser or chat.user_id == user.id)):
+    # Anonymous or pulic chat can be accessed by anyone
+    # Non-anonymous chat can be accessed by owner or superuser
+    if not chat.user_id or chat.visibility == ChatVisibility.PUBLIC:
+        return True
+    return user is not None and (user.is_superuser or chat.user_id == user.id)
+
+
+def user_can_edit_chat(chat: DBChat, user: Optional[User]) -> bool:
+    if user is None:
         return False
-    return True
+    if user.is_superuser:
+        return True
+    return chat.user_id == user.id
+
+
+def get_graph_data_from_langfuse(trace_url: str):
+    start_time = time.time()
+    langfuse_host = SiteSetting.langfuse_host
+    langfuse_secret_key = SiteSetting.langfuse_secret_key
+    langfuse_public_key = SiteSetting.langfuse_public_key
+    enable_langfuse = langfuse_host and langfuse_secret_key and langfuse_public_key
+    current_time = time.time()
+    logger.debug(
+        f"Graph Load - Fetch langfuse configs from site setting, time cost: {current_time - start_time}s"
+    )
+    logger.debug(
+        f"Graph Load - trace_url: {trace_url}, enable_langfuse: {enable_langfuse}"
+    )
+    start_time = current_time
+    if enable_langfuse and trace_url is not None and trace_url != "":
+        langfuse_client = Langfuse(
+            secret_key=langfuse_secret_key,
+            public_key=langfuse_public_key,
+            host=langfuse_host,
+        )
+        trace_id = trace_url.split("/trace/")[-1]
+        ob_data = langfuse_client.fetch_observations(trace_id=trace_id)
+        current_time = time.time()
+        logger.debug(
+            f"Graph Load - Fetch trace({trace_id}) from langfuse, time cost: {current_time - start_time}s"
+        )
+        start_time = current_time
+        all_entities = []
+        all_relationships = []
+
+        for obd in ob_data.data:
+            if obd.name == MyCBEventType.GRAPH_SEMANTIC_SEARCH:
+                for _, sg in obd.output["queries"].items():
+                    all_entities.extend(sg["entities"])
+                    all_relationships.extend(sg["relationships"])
+
+        unique_entities = {e["id"]: e for e in all_entities}.values()
+        unique_relationships = {r["id"]: r for r in all_relationships}.values()
+
+        logger.debug(
+            f"Graph Load - Fetch trace({trace_id}) from langfuse, relationships: {len(unique_relationships)}, time cost: {time.time() - start_time}s"
+        )
+
+        return list(unique_entities), list(unique_relationships)
+    else:
+        return [], []
 
 
 def get_chat_message_subgraph(
@@ -463,6 +628,52 @@ def get_chat_message_subgraph(
 ) -> Tuple[List, List]:
     if chat_message.role != MessageRole.USER:
         return [], []
+
+    # try to get subgraph from chat_message.graph_data
+    try:
+        if (
+            chat_message.graph_data
+            and "relationships" in chat_message.graph_data
+            and len(chat_message.graph_data["relationships"]) > 0
+        ):
+            relationship_ids = chat_message.graph_data["relationships"]
+            all_entities, all_relationships = editor.get_relationship_by_ids(
+                session, relationship_ids
+            )
+            entities = [
+                {
+                    "id": e.id,
+                    "name": e.name,
+                    "description": e.description,
+                    "meta": e.meta,
+                    "entity_type": e.entity_type,
+                }
+                for e in all_entities
+            ]
+            relationships = [
+                {
+                    "id": r.id,
+                    "source_entity_id": r.source_entity_id,
+                    "target_entity_id": r.target_entity_id,
+                    "description": r.description,
+                    "rag_description": f"{r.source_entity.name} -> {r.description} -> {r.target_entity.name}",
+                    "meta": r.meta,
+                    "weight": r.weight,
+                    "last_modified_at": r.last_modified_at,
+                }
+                for r in all_relationships
+            ]
+            return entities, relationships
+    except Exception as e:
+        logger.error(f"Failed to get subgraph from chat_message.graph_data: {e}")
+
+    # try to get subgraph from langfuse trace
+    try:
+        entities, relationships = get_graph_data_from_langfuse(chat_message.trace_url)
+        if len(relationships) > 0:
+            return list(entities), list(relationships)
+    except Exception as e:
+        logger.error(f"Failed to get subgraph from langfuse trace: {e}")
 
     chat: DBChat = chat_message.chat
     chat_engine_config = ChatEngineConfig.load_from_db(session, chat.engine.name)

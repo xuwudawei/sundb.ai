@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from llama_index.core import VectorStoreIndex, ServiceContext
+from llama_index.core import VectorStoreIndex
 from llama_index.core.schema import NodeWithScore
 from sqlmodel import Session, select
 
@@ -67,7 +67,10 @@ class RetrieveService:
             )
 
             if kg_config.using_intent_search:
-                result = graph_index.intent_based_search(question, include_meta=True)
+                sub_queries = graph_index.intent_analyze(question)
+                result = graph_index.graph_semantic_search(
+                    sub_queries, include_meta=True
+                )
 
                 graph_knowledges = get_prompt_by_jinja2_template(
                     self.chat_engine_config.llm.intent_graph_knowledge,
@@ -113,14 +116,10 @@ class RetrieveService:
             self.chat_engine_config.llm.refine_prompt,
             graph_knowledges=graph_knowledges_context,
         )
-        service_context = ServiceContext.from_defaults(
-            llm=_llm,
-            embed_model=_embed_model,
-        )
         vector_store = TiDBVectorStore(session=self.db_session)
         vector_index = VectorStoreIndex.from_vector_store(
             vector_store,
-            service_context=service_context,
+            embed_model=_embed_model,
         )
 
         retrieve_engine = vector_index.as_retriever(
@@ -129,7 +128,6 @@ class RetrieveService:
             text_qa_template=text_qa_template,
             refine_template=refine_template,
             similarity_top_k=top_k,
-            service_context=service_context,
         )
 
         node_list: List[NodeWithScore] = retrieve_engine.retrieve(refined_question)

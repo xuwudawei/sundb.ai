@@ -13,6 +13,7 @@ from pgvector.sqlalchemy import Vector
 from llama_index.core.schema import TextNode
 from app.core.config import settings
 
+from app.core.config import settings
 from .base import UpdatableBaseModel, UUIDBaseModel
 
 

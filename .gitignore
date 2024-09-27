@@ -1,7 +1,9 @@
+*_dev.ipynb
 .idea
 .env
 
 redis-data
 data
 venv
+
 .aider*

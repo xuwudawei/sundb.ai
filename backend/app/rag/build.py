@@ -4,12 +4,6 @@ import dspy
 from llama_index.core import VectorStoreIndex
 from llama_index.core.llms.llm import LLM
 from llama_index.core.node_parser import SentenceSplitter
-from app.core.config import settings
-from llama_index.core.extractors import (
-    SummaryExtractor,
-    KeywordExtractor,
-    QuestionsAnsweredExtractor,
-)
 from sqlmodel import Session
 
 from app.rag.knowledge_graph.graph_store import TiDBGraphStore
@@ -17,6 +11,7 @@ from app.rag.knowledge_graph import KnowledgeGraphIndex
 from app.rag.node_parser import MarkdownNodeParser
 from app.rag.vector_store.tidb_vector_store import TiDBVectorStore
 from app.rag.chat_config import get_default_embedding_model
+from app.core.config import settings
 from app.models import (
     Document as DBDocument,
     Chunk as DBChunk,
@@ -44,18 +39,17 @@ class BuildService:
         embed_mode = get_default_embedding_model(session)
 
         if db_document.mime_type.lower() == "text/markdown":
-            spliter = MarkdownNodeParser()
+            # spliter = MarkdownNodeParser()
+            # TODO: FIX MarkdownNodeParser
+            spliter = SentenceSplitter(
+                chunk_size=7900,
+            )
         else:
             spliter = SentenceSplitter(
-                chunk_size=settings.EMBEDDING_MAX_TOKENS,
+                chunk_size=7900,
             )
 
-        _transformations = [
-            spliter,
-            SummaryExtractor(llm=self._llm),
-            KeywordExtractor(llm=self._llm),
-            QuestionsAnsweredExtractor(llm=self._llm),
-        ]
+        _transformations = [spliter]
         """
         Build vector index and graph index from document.
         """

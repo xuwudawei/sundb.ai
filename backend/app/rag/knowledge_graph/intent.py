@@ -3,6 +3,7 @@ import dspy
 from dspy.functional import TypedChainOfThought, TypedPredictor
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from llama_index.core.tools import FunctionTool
 
 from app.rag.knowledge_graph.schema import Relationship
 
@@ -13,9 +14,7 @@ class RelationshipReasoning(Relationship):
     """Relationship between two entities extracted from the query"""
 
     reasoning: str = Field(
-        description=(
-            "Category reasoning for the relationship, e.g., 'the main conerns of the user', 'the problem the user is facing', 'the user case scenario', etc."
-        )
+        description=("Explanation of the user's intention for this step.")
     )
 
 
@@ -23,32 +22,28 @@ class DecomposedFactors(BaseModel):
     """Decomposed factors extracted from the query to form the knowledge graph"""
 
     relationships: List[RelationshipReasoning] = Field(
-        description="List of relationships to represent critical concepts and their relationships extracted from the query."
+        description="List of relationships representing the user's prerequisite and step-by-step intentions extracted from the query."
     )
 
 
 class DecomposeQuery(dspy.Signature):
-    """You are a knowledge base graph expert and are very good at building knowledge graphs. Now you are assigned to extract the most critical concepts and their relationships from the query. Step-by-Step Analysis:
-
-    1. Extract Meaningful user intents and questions:
-      - Identify the question what the user itentionally asked, focusing on the the critial information about user's main concerns/questions/problems/use cases, etc.
-      - Make this question simple and clear and ensure that it is directly related to the user's main concerns. Simple and clear question can improve the search accuracy.
-    2. Establish Relationships to describe the user's intents:
-      - Define relationships that accurately represent the user's query intent and information needs.
-      - Format each relationship as: (Source Entity) - [Relationship] -> (Target Entity), where the relationship describes what the user wants to know about the connection between these entities.
+    """You are a knowledge base graph expert and are very good at building knowledge graphs. Now you are assigned to extract the user's step-by-step questions from the query.
 
     ## Instructions:
 
-    - Limit to no more than 3 pairs. These pairs must accurately reflect the user's real (sub)questions.
-    - Ensure that the extracted pairs are of high quality and do not introduce unnecessary search elements.
-    - Ensure that the relationships and intents are grounded and factual, based on the information provided in the query.
+    - Break down the user's query into a sequence of prerequisite questions (e.g., identifying specific versions) and step-by-step questions.
+    - Represent each questions as a relationship: (Source Entity) - [Relationship] -> (Target Entity).
+    - Provide reasoning for each relationship, explaining the user's intention at that step.
+    - Limit to no more than 5 relationships.
+    - Ensure that the extracted relationships accurately reflect the user's real intentions.
+    - Ensure that the relationships and intentions are grounded and factual, based on the information provided in the query.
     """
 
     query: str = dspy.InputField(
-        desc="The query text to extract the most critical concepts and their relationships from the query."
+        desc="The query text to extract the user's step-by-step questions."
     )
     factors: DecomposedFactors = dspy.OutputField(
-        desc="Factors representation of the critical concepts and their relationships extracted from the query."
+        desc="Representation of the user's step-by-step questions extracted from the query."
     )
 
 
@@ -71,3 +66,24 @@ class IntentAnalyzer:
 
     def analyze(self, query: str) -> DecomposedFactors:
         return self.intent_anlysis_prog(query=query).factors
+
+    def as_tool_call(self):
+        def breakDownQuery(query: str) -> list[str]:
+            """
+            Break down the complex user query into sub-questions and solve them step-by-step.
+
+            If the query is complex, this function decomposes it into smaller sub-questions
+            and solves them individually. For simple and straightforward queries,
+            avoid calling this function.
+
+            Args:
+            query (str): The user's input query.
+
+            Returns:
+            str: The final result after solving all sub-questions.
+            """
+
+            return [query]
+
+        return FunctionTool.from_defaults(fn=breakDownQuery)
+

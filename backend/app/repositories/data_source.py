@@ -1,18 +1,21 @@
 from typing import Optional
 from datetime import datetime, UTC
-import logging
-from sqlmodel import select, Session, func
+
+from sqlmodel import select, Session, func, update
 from fastapi_pagination import Params, Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
-from app.models import DataSource, Document, Chunk, Relationship
+from app.models import (
+    DataSource,
+    Document,
+    DocIndexTaskStatus,
+    Chunk,
+    KgIndexStatus,
+    Relationship,
+)
 from app.repositories.base_repo import BaseRepo
+from app.schemas import VectorIndexError, KGIndexError
 
-
-
-# Set up the logger
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # Set the logging level
 
 class DataSourceRepo(BaseRepo):
     model_cls = DataSource
@@ -22,7 +25,6 @@ class DataSourceRepo(BaseRepo):
         session: Session,
         params: Params | None = Params(),
     ) -> Page[DataSource]:
-        # logger.debug(f"Paginating data sources with params: {params}")
         query = (
             select(DataSource)
             .where(DataSource.deleted_at == None)
@@ -30,17 +32,28 @@ class DataSourceRepo(BaseRepo):
         )
         return paginate(session, query, params)
 
+    # def get(
+    #     self,
+    #     session: Session,
+    #     data_source_id: int,
+    # ) -> Optional[DataSource]:
+    #     return session.execute(
+    #         select(DataSource).where(
+    #             DataSource.id == data_source_id, DataSource.deleted_at == None
+    #         )
+    #     ).first()
     def get(
-        self,
-        session: Session,
-        data_source_id: int,
+    self,
+    session: Session,
+    data_source_id: int,
     ) -> Optional[DataSource]:
-        # logger.debug(f"Fetching data source with id: {data_source_id}")
-        return session.scalars(
+        result = session.execute(
             select(DataSource).where(
                 DataSource.id == data_source_id, DataSource.deleted_at == None
             )
-        ).first()
+        )
+        return result.scalar_one_or_none()
+
 
     def delete(self, session: Session, data_source: DataSource) -> None:
         data_source.deleted_at = datetime.now(UTC)
@@ -49,7 +62,6 @@ class DataSourceRepo(BaseRepo):
 
     def overview(self, session: Session, data_source: DataSource) -> dict:
         data_source_id = data_source.id
-        logger.debug(f"Generating overview for data source with id: {data_source_id}")
         documents_count = session.scalar(
             select(func.count(Document.id)).where(
                 Document.data_source_id == data_source_id
@@ -60,9 +72,7 @@ class DataSourceRepo(BaseRepo):
                 Chunk.document.has(Document.data_source_id == data_source_id)
             )
         )
-        logger.debug(f"Chunks count for data source {data_source_id}: {chunks_count}")
 
-        # Vector index status
         statement = (
             select(Document.index_status, func.count(Document.id))
             .where(Document.data_source_id == data_source_id)
@@ -70,9 +80,7 @@ class DataSourceRepo(BaseRepo):
             .order_by(Document.index_status)
         )
         results = session.execute(statement).all()
-        vector_index_status = [{"index_status": row[0], "count": row[1]} for row in results]  # Convert to dict
-        # vector_index_status = {s: c for s, c in results}
-        # logger.debug(f"Vector index status for data source {data_source_id}: {vector_index_status}")
+        vector_index_status = {s: c for s, c in results}
 
         overview_data = {
             "documents": {
@@ -85,8 +93,6 @@ class DataSourceRepo(BaseRepo):
         }
 
         if data_source.build_kg_index:
-            # logger.debug(f"KG indexing enabled for data source {data_source_id}")
-            # Relationship count for KG index
             relationships_count = session.scalar(
                 select(func.count(Relationship.id)).where(
                     Relationship.document_id.in_(
@@ -96,11 +102,10 @@ class DataSourceRepo(BaseRepo):
                     )
                 )
             )
-            # logger.debug(f"Relationship count for data source {data_source_id}: {relationships_count}")
             overview_data["relationships"] = {
                 "total": relationships_count,
             }
-            # KG index status
+
             statement = (
                 select(Chunk.index_status, func.count(Chunk.id))
                 .where(Chunk.document.has(Document.data_source_id == data_source_id))
@@ -108,12 +113,144 @@ class DataSourceRepo(BaseRepo):
                 .order_by(Chunk.index_status)
             )
             results = session.execute(statement).all()
-            # kg_index_status = {s: c for s, c in results}
-            kg_index_status = [{"index_status": row[0], "count": row[1]} for row in results]  # Convert to dict
-            logger.debug(f"KG index status for data source {data_source_id}: {kg_index_status}")
+            kg_index_status = {s: c for s, c in results}
             overview_data["kg_index"] = kg_index_status
-        logger.info(f"Overview generated for data source {data_source_id}")
+
         return overview_data
+
+    def vector_index_built_errors(
+        self,
+        session: Session,
+        data_source: DataSource,
+        params: Params | None = Params(),
+    ) -> Page[VectorIndexError]:
+        query = (
+            select(
+                Document.id,
+                Document.name,
+                Document.source_uri,
+                Document.index_result,
+            )
+            .where(
+                Document.data_source_id == data_source.id,
+                Document.index_status == DocIndexTaskStatus.FAILED,
+            )
+            .order_by(Document.id.desc())
+        )
+        return paginate(
+            session,
+            query,
+            params,
+            transformer=lambda items: [
+                VectorIndexError(
+                    document_id=item[0],
+                    document_name=item[1],
+                    source_uri=item[2],
+                    error=item[3],
+                )
+                for item in items
+            ],
+        )
+
+    def kg_index_built_errors(
+        self,
+        session: Session,
+        data_source: DataSource,
+        params: Params | None = Params(),
+    ) -> Page[KGIndexError]:
+        query = (
+            select(
+                Chunk.id,
+                Chunk.source_uri,
+                Chunk.index_result,
+            )
+            .where(
+                Chunk.document.has(Document.data_source_id == data_source.id),
+                Chunk.index_status == KgIndexStatus.FAILED,
+            )
+            .order_by(Chunk.id.desc())
+        )
+        return paginate(
+            session,
+            query,
+            params,
+            transformer=lambda items: [
+                KGIndexError(
+                    chunk_id=item[0],
+                    source_uri=item[1],
+                    error=item[2],
+                )
+                for item in items
+            ],
+        )
+
+    def set_failed_vector_index_tasks_to_pending(
+        self, session: Session, data_source: DataSource
+    ) -> list[int]:
+        result = session.execute(
+        select(Document.id).where(
+            Document.data_source_id == data_source.id,
+            Document.index_status == DocIndexTaskStatus.FAILED,
+        )
+    )
+        failed_document_ids = result.scalars().all()
+        if not failed_document_ids:
+            # No failed documents to update
+            return []
+        # failed_document_ids = session.execute(
+        #     select(Document.id).where(
+        #         Document.data_source_id == data_source.id,
+        #         Document.index_status == DocIndexTaskStatus.FAILED,
+        #     )
+        # ).all()
+        stmt = (
+            update(Document)
+            .where(
+                Document.id.in_(failed_document_ids),
+                Document.index_status == DocIndexTaskStatus.FAILED,
+            )
+            .values(index_status=DocIndexTaskStatus.PENDING)
+        )
+        session.execute(stmt)
+        session.commit()
+        return failed_document_ids
+
+    def set_failed_kg_index_tasks_to_pending(
+        self, session: Session, data_source: DataSource
+    ) -> list[tuple]:
+        # failed_chunks = session.execute(
+        #     select(
+        #         Chunk.id,
+        #         Chunk.document_id,
+        #     ).where(
+        #         Chunk.document.has(Document.data_source_id == data_source.id),
+        #         Chunk.index_status == KgIndexStatus.FAILED,
+        #     )
+        # ).all()
+
+        result = session.execute(
+            select(
+                Chunk.id,
+                Chunk.document_id,
+            ).where(
+                Chunk.document.has(Document.data_source_id == data_source.id),
+                Chunk.index_status == KgIndexStatus.FAILED,
+            )
+        )
+        failed_chunks = result.all()
+        if not failed_chunks:
+            return []
+        failed_chunk_ids = [chunk_id for chunk_id, _ in failed_chunks]
+
+        # failed_chunks_ids = [chunk[0] for chunk in failed_chunks]
+        stmt = (
+            update(Chunk)
+            .where(Chunk.id.in_(failed_chunk_ids))
+            .values(index_status=KgIndexStatus.PENDING)
+        )
+        session.execute(stmt)
+        session.commit()
+        return failed_chunks
 
 
 data_source_repo = DataSourceRepo()

@@ -1,7 +1,9 @@
 import { chat, type Chat, type ChatMessage, type PostChatParams } from '@/api/chats';
 import { ChatMessageController, type OngoingState } from '@/components/chat/chat-message-controller';
 import { AppChatStreamState, chatDataPartSchema, type ChatMessageAnnotation, fixChatInitialData } from '@/components/chat/chat-stream-state';
+import type { GtagFn } from '@/components/gtag-provider';
 import { getErrorMessage } from '@/lib/errors';
+import { trigger } from '@/lib/react';
 import { type JSONValue, type StreamPart } from 'ai';
 import EventEmitter from 'eventemitter3';
 
@@ -21,6 +23,12 @@ export interface ChatControllerEventsMap {
   'post-initialized': [];
   'post-finished': [];
   'post-error': [error: unknown];
+
+  /**
+   * Experimental
+   */
+  'ui:input-mount': [HTMLTextAreaElement | HTMLInputElement];
+  'ui:input-unmount': [HTMLTextAreaElement | HTMLInputElement];
 }
 
 export class ChatController extends EventEmitter<ChatControllerEventsMap> {
@@ -32,6 +40,8 @@ export class ChatController extends EventEmitter<ChatControllerEventsMap> {
   private _postError: unknown = undefined;
   private _postInitialized: boolean = false;
 
+  private _inputElement: HTMLTextAreaElement | HTMLInputElement | null = null;
+
   get postState () {
     return {
       params: this._postParams,
@@ -40,7 +50,13 @@ export class ChatController extends EventEmitter<ChatControllerEventsMap> {
     };
   }
 
-  constructor (chat: Chat | undefined = undefined, messages: ChatMessage[] | undefined = [], initialPost: Omit<PostChatParams, 'chat_id'> | undefined = undefined) {
+  constructor (
+    chat: Chat | undefined = undefined,
+    messages: ChatMessage[] | undefined = [],
+    initialPost: Omit<PostChatParams, 'chat_id'> | undefined = undefined,
+    inputElement: HTMLInputElement | HTMLTextAreaElement | null = null,
+    private readonly _gtagFn: GtagFn = () => {},
+  ) {
     super();
     if (chat) {
       this.chat = chat;
@@ -50,6 +66,77 @@ export class ChatController extends EventEmitter<ChatControllerEventsMap> {
     }
     if (initialPost) {
       this.post(initialPost);
+    }
+    this._inputElement = inputElement;
+    if (inputElement) {
+      this.emit('ui:input-mount', inputElement);
+    }
+  }
+
+  get inputElement () {
+    return this._inputElement;
+  }
+
+  set inputElement (value: HTMLInputElement | HTMLTextAreaElement | null) {
+    if (this._inputElement) {
+      if (value) {
+        if (value !== this._inputElement) {
+          const old = this._inputElement;
+          this._inputElement = null;
+          this.emit('ui:input-unmount', old);
+
+          this._inputElement = value;
+          this.emit('ui:input-mount', value);
+        }
+      } else {
+        const old = this._inputElement;
+        this._inputElement = null;
+        this.emit('ui:input-unmount', old);
+      }
+    } else {
+      if (value) {
+        this._inputElement = value;
+        this.emit('ui:input-mount', value);
+      }
+    }
+  }
+
+  private get _enabledInputElement () {
+    if (!this._inputElement) {
+      console.warn('Input element is not exists.');
+      return;
+    }
+    if (this._inputElement.disabled) {
+      console.warn('Input element is disabled currently.');
+      return;
+    }
+
+    return this._inputElement;
+  }
+
+  get inputEnabled () {
+    if (!this._inputElement) {
+      return false;
+    }
+
+    return !this._inputElement.disabled;
+  }
+
+  get input (): string {
+    return this._inputElement?.value ?? '';
+  }
+
+  set input (value: string) {
+    const inputElement = this._enabledInputElement;
+    if (inputElement) {
+      trigger(inputElement as HTMLTextAreaElement, HTMLTextAreaElement, value);
+    }
+  }
+
+  focusInput () {
+    const inputElement = this._enabledInputElement;
+    if (inputElement) {
+      inputElement.focus();
     }
   }
 
@@ -61,6 +148,14 @@ export class ChatController extends EventEmitter<ChatControllerEventsMap> {
     if (this._postParams) {
       throw new Error('previous not finished.');
     }
+
+    if (!params.content.trim()) {
+      throw new Error('Empty message');
+    }
+
+    this._gtagFn('event', 'tidbai.events.message-start', {
+      'tidbai_appending_message': !!this.chat?.id,
+    });
 
     // Initialize post states
     this._postParams = params;
@@ -91,10 +186,14 @@ export class ChatController extends EventEmitter<ChatControllerEventsMap> {
       this._postParams = undefined;
       this._postInitialized = false;
       this.emit('post-finished');
+
+      this._gtagFn('event', 'tidbai.events.message-finish', {});
     } catch (error) {
       ongoingMessageController?.applyError(getErrorMessage(error));
       this._postError = error;
       this.emit('post-error', error);
+
+      this._gtagFn('event', 'tidbai.events.message-error', {});
     }
   }
 

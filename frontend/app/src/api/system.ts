@@ -1,4 +1,4 @@
-import { authenticationHeaders, BASE_URL, handleResponse } from '@/lib/request';
+import { authenticationHeaders, handleResponse, requestUrl } from '@/lib/request';
 import { z } from 'zod';
 
 export interface RequiredBootstrapStatus {
@@ -34,10 +34,11 @@ const bootstrapStatusSchema = z.object({
 });
 
 export async function getBootstrapStatus (): Promise<BootstrapStatus> {
-  return await fetch(`${BASE_URL}/api/v1/system/bootstrap-status`, {
+  return await fetch(requestUrl(`/api/v1/system/bootstrap-status`), {
     headers: {
       ...await authenticationHeaders(),
     },
+    credentials: 'include',
   }).then(handleResponse(bootstrapStatusSchema));
 }
 

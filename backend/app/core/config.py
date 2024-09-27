@@ -85,27 +85,16 @@ class Settings(BaseSettings):
     TIDB_AI_API_KEY: SecretStr | None = None
 
     COMPLIED_INTENT_ANALYSIS_PROGRAM_PATH: str | None = None
+    COMPLIED_PREREQUISITE_ANALYSIS_PROGRAM_PATH: str | None = None
 
-    # Currently, we only support 1536 dims for the embedding model
-    # EMBEDDOMG_DIMS: int = 1536
+    # CAUTION: Do not change EMBEDDING_DIMS after initializing the database.
+    # Changing the embedding dimensions requires recreating the database and tables.
+    # The default EMBEDDING_DIMS and EMBEDDING_MAX_TOKENS are set for the OpenAI text-embedding-3-small model.
+    # If using a different embedding model, adjust these values according to the model's specifications.
+    # For example:
+    #   maidalun1020/bce-embedding-base_v1: EMBEDDING_DIMS=768   EMBEDDING_MAX_TOKENS=512
     EMBEDDING_DIMS: int = 1536
-    EMBEDDING_MAX_TOKENS: int = 8191
-
-    # @computed_field  # type: ignore[misc]
-    # @property
-    # def SQLALCHEMY_DATABASE_URI(self) -> MySQLDsn:
-    #     return MultiHostUrl.build(
-    #         scheme="mysql+pymysql",
-    #         username=self.TIDB_USER,
-    #         password=self.TIDB_PASSWORD,
-    #         host=self.TIDB_HOST,
-    #         port=self.TIDB_PORT,
-    #         path=self.TIDB_DATABASE,
-    #         query="ssl_verify_cert=true&ssl_verify_identity=true"
-    #         if self.TIDB_SSL
-    #         else None,
-    #     )
-
+    EMBEDDING_MAX_TOKENS: int = 7900
 
     @computed_field  # type: ignore[misc]
     @property

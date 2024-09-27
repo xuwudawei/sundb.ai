@@ -5,12 +5,11 @@ import { defineConfig } from 'vite';
 import injectCss from 'vite-plugin-css-injected-by-js';
 
 const overriding = [
-  'components/chat/style.css',
+  'components/remark-content/style.scss',
+  'components/code-theme/style.scss',
 ];
 
-const overridingPackages = [
-  'next/headers',
-];
+const overridingPackages: string[] = [];
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -19,9 +18,10 @@ export default defineConfig({
   ),
   build: {
     lib: {
-      entry: "src/library.tsx",
-      formats: ["cjs"],
-      fileName: () => "widget.js",
+      entry: 'src/library.tsx',
+      formats: ['iife'],
+      name: '__this_name_should_never_exists_on_window__',
+      fileName: () => 'widget.js',
     },
     rollupOptions: {
       output: {
@@ -31,6 +31,7 @@ export default defineConfig({
   },
   publicDir: "../../app/public",
   resolve: {
+    conditions: ['tidbai-widget'],
     alias: [
       ...overriding.map((override) => ({
         find: path.join("@", override),
@@ -56,6 +57,7 @@ export default defineConfig({
     "process.env.__NEXT_ROUTER_BASEPATH": '""',
   },
   server: {
+    port: 3000,
     proxy: {
       "/api": "http://localhost:5500",
     },

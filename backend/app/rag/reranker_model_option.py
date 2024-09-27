@@ -13,6 +13,8 @@ class RerankerModelOption(BaseModel):
     reranker_model_description: str
     default_top_n: int = 10
     default_credentials: str | dict = ""
+    default_config: dict = {}
+    config_description: str = ""
     credentials_display_name: str
     credentials_description: str
     credentials_type: str = "str"
@@ -44,5 +46,35 @@ admin_reranker_model_options: List[RerankerModelOption] = [
         credentials_description="You can get one from https://dashboard.cohere.com/api-keys",
         credentials_type="str",
         default_credentials="*****",
+    ),
+    RerankerModelOption(
+        provider=RerankerProvider.BAISHENG,
+        provider_display_name="BaiSheng",
+        default_reranker_model="bge-reranker-v2-m3",
+        reranker_model_description="",
+        default_top_n=10,
+        default_config={
+            "api_url": "http://api.chat.prd.yumc.local/chat/v1/reranker",
+        },
+        credentials_display_name="BaiSheng API Key",
+        credentials_description="",
+        credentials_type="str",
+        default_credentials="*****",
+    ),
+    RerankerModelOption(
+        provider=RerankerProvider.LOCAL,
+        provider_display_name="Local Reranker",
+        provider_description="TIDB.AI's local reranker server, deployed on your own infrastructure and powered by sentence-transformers.",
+        default_reranker_model="BAAI/bge-reranker-v2-m3",
+        reranker_model_description="Find more models in huggingface.",
+        default_top_n=10,
+        default_config={
+            "api_url": "http://local-embedding-reranker:5001/api/v1/reranker",
+        },
+        config_description="api_url is the url of the tidb ai local reranker server.",
+        credentials_display_name="Local Reranker API Key",
+        credentials_description="Local Reranker server doesn't require an API key, set a dummy string here is ok.",
+        credentials_type="str",
+        default_credentials="dummy",
     ),
 ]

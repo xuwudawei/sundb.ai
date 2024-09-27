@@ -1,13 +1,16 @@
+import { useAuth } from '@/components/auth/AuthProvider';
 import { type ChatMessageGroup, useChatPostState, useCurrentChatController } from '@/components/chat/chat-hooks';
 import { DebugInfo } from '@/components/chat/debug-info';
-import { MessageAnnotation } from '@/components/chat/message-annotation';
-import { MessageContent } from '@/components/chat/message-content';
+import { MessageAnnotationHistory } from '@/components/chat/message-annotation-history';
+import { MessageAnswer } from '@/components/chat/message-answer';
+import { MessageAutoScroll } from '@/components/chat/message-auto-scroll';
 import { MessageContextSources } from '@/components/chat/message-content-sources';
 import { MessageError } from '@/components/chat/message-error';
-import { MessageHeading } from '@/components/chat/message-heading';
 import { MessageOperations } from '@/components/chat/message-operations';
+import { MessageSection } from '@/components/chat/message-section';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { MessageVerify } from '@/experimental/chat-verify-service/message-verify';
 import { cn } from '@/lib/utils';
 import { InfoIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -65,7 +68,8 @@ export function ConversationMessageGroups ({ groups }: { groups: ChatMessageGrou
 }
 
 function ConversationMessageGroup ({ group }: { group: ChatMessageGroup }) {
-  const enableDebug = !process.env.NEXT_PUBLIC_DISABLE_DEBUG_PANEL;
+  const { me } = useAuth();
+  const enableDebug = !!me && !process.env.NEXT_PUBLIC_DISABLE_DEBUG_PANEL;
 
   const [debugInfoOpen, setDebugInfoOpen] = useState(false);
   const [highlight, setHighlight] = useState(false);
@@ -97,13 +101,21 @@ function ConversationMessageGroup ({ group }: { group: ChatMessageGroup }) {
         </CollapsibleContent>
       </Collapsible>
 
-      <MessageContextSources message={group.assistant} />
-      <section className="space-y-2">
-        <MessageHeading />
-        {group.assistant && <MessageError message={group.assistant} />}
-        <MessageContent message={group.assistant} />
-        <MessageAnnotation message={group.assistant} />
-      </section>
+      <MessageAnnotationHistory message={group.assistant} />
+
+      <MessageSection className="!mt-1" message={group.assistant}>
+        <MessageContextSources message={group.assistant} />
+      </MessageSection>
+
+      <MessageSection className="space-y-2" message={group.assistant}>
+        <MessageAnswer message={group.assistant} showBetaAlert={group.hasFirstAssistantMessage} />
+        {group.assistant && <MessageAutoScroll message={group.assistant} />}
+      </MessageSection>
+
+      {group.assistant && <MessageError message={group.assistant} />}
+
+      <MessageVerify assistant={group.assistant} />
+
       {group.assistant && <MessageOperations message={group.assistant} />}
     </section>
   );

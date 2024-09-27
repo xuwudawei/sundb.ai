@@ -1,23 +1,24 @@
 import type { ChatEngineOptions } from '@/api/chat-engines';
 import { type KnowledgeGraph, knowledgeGraphSchema } from '@/api/graph';
 import { bufferedReadableStreamTransformer } from '@/lib/buffered-readable-stream';
-import { authenticationHeaders, BASE_URL, buildUrlParams, handleErrors, handleResponse, type Page, type PageParams, zodPage } from '@/lib/request';
+import { authenticationHeaders, handleErrors, handleResponse, type Page, type PageParams, requestUrl, zodPage } from '@/lib/request';
 import { zodJsonDate } from '@/lib/zod';
 import { parseStreamPart } from 'ai';
 import { z, type ZodType } from 'zod';
 
-const mockChat = !!process.env.NEXT_PUBLIC_MOCKING_CHAT;
+type ClientEngineOptions = Omit<ChatEngineOptions, 'post_verification_token'>;
 
 export interface Chat {
   title: string;
   engine_id: number;
-  engine_options: ChatEngineOptions;
+  engine_options: ClientEngineOptions;
   deleted_at: Date | null;
   user_id: string | null;
   browser_id: string | null;
   updated_at: Date;
   created_at: Date;
   id: string;
+  origin: string | null;
 }
 
 export interface ChatDetail {
@@ -43,6 +44,7 @@ export interface ChatMessage {
   content: string;
   sources: ChatMessageSource[];
   chat_id: string;
+  post_verification_result_url: string | null;
 }
 
 export interface ChatMessageSource {
@@ -54,13 +56,14 @@ export interface ChatMessageSource {
 export const chatSchema = z.object({
   title: z.string(),
   engine_id: z.number(),
-  engine_options: z.string().transform(value => JSON.parse(value) as ChatEngineOptions),
+  engine_options: z.object({}).passthrough().transform(value => value as never as ChatEngineOptions),
   deleted_at: zodJsonDate().nullable(),
   user_id: z.string().nullable(),
   browser_id: z.string().nullable(),
   updated_at: zodJsonDate(),
   created_at: zodJsonDate(),
   id: z.string(),
+  origin: z.string().nullable(),
 }) satisfies ZodType<Chat, any, any>;
 
 const chatMessageSourceSchema = z.object({
@@ -82,6 +85,7 @@ export const chatMessageSchema = z.object({
   content: z.string(),
   sources: chatMessageSourceSchema.array(),
   chat_id: z.string(),
+  post_verification_result_url: z.string().url().nullable(),
 }) satisfies ZodType<ChatMessage, any, any>;
 
 const chatDetailSchema = z.object({
@@ -104,61 +108,47 @@ export interface PostChatParams {
 }
 
 export async function listChats ({ page = 1, size = 10 }: PageParams = {}): Promise<Page<Chat>> {
-  return await fetch(BASE_URL + '/api/v1/chats' + '?' + buildUrlParams({ page, size }), {
+  return await fetch(requestUrl('/api/v1/chats', { page, size }), {
     headers: await authenticationHeaders(),
   })
     .then(handleResponse(zodPage(chatSchema)));
 }
 
 export async function getChat (id: string): Promise<ChatDetail> {
-  return await fetch(BASE_URL + `/api/v1/chats/${id}`, {
+  return await fetch(requestUrl(`/api/v1/chats/${id}`), {
     headers: await authenticationHeaders(),
   })
     .then(handleResponse(chatDetailSchema));
 }
 
 export async function deleteChat (id: string): Promise<void> {
-  await fetch(BASE_URL + `/api/v1/chats/${id}`, {
+  await fetch(requestUrl(`/api/v1/chats/${id}`), {
     method: 'delete',
     headers: await authenticationHeaders(),
   }).then(handleErrors);
 }
 
 export async function postFeedback (chatMessageId: number, feedback: FeedbackParams) {
-  return await fetch(BASE_URL + `/api/v1/chat-messages/${chatMessageId}/feedback`, {
+  return await fetch(requestUrl(`/api/v1/chat-messages/${chatMessageId}/feedback`), {
     method: 'post',
     headers: {
       ...await authenticationHeaders(),
       'Content-Type': 'application/json',
     },
+    credentials: 'include',
     body: JSON.stringify(feedback),
   }).then(handleErrors);
 }
 
 export async function getChatMessageSubgraph (chatMessageId: number): Promise<KnowledgeGraph> {
-  return await fetch(BASE_URL + `/api/v1/chat-messages/${chatMessageId}/subgraph`, {
+  return await fetch(requestUrl(`/api/v1/chat-messages/${chatMessageId}/subgraph`), {
     headers: await authenticationHeaders(),
+    credentials: 'include',
   })
     .then(handleResponse(knowledgeGraphSchema));
 }
 
 export async function* chat ({ chat_id, chat_engine, content, headers: headersInit, signal }: PostChatParams, onResponse?: (response: Response) => void) {
-  if (mockChat) {
-    const res = await fetch('/chats.mock.txt');
-    const text = await res.text();
-    for (let line of text.split('\n')) {
-      if (line.startsWith('0:')) {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      if (line) {
-        yield parseStreamPart(line + '\n');
-      }
-    }
-    return;
-  }
-
   const headers = new Headers(headersInit);
   headers.set('Content-Type', 'application/json');
 
@@ -166,9 +156,10 @@ export async function* chat ({ chat_id, chat_engine, content, headers: headersIn
     headers.set(key, value);
   }
 
-  const response = await fetch(BASE_URL + `/api/v1/chats`, {
+  const response = await fetch(requestUrl(`/api/v1/chats`), {
     method: 'POST',
     headers,
+    credentials: 'include',
     body: JSON.stringify({
       chat_id,
       chat_engine,

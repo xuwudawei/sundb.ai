@@ -17,7 +17,8 @@ from llama_index.core.schema import BaseNode, TransformComponent
 import llama_index.core.instrumentation as instrument
 
 from app.rag.knowledge_graph.extractor import SimpleGraphExtractor
-from app.rag.knowledge_graph.intent import IntentAnalyzer
+from app.rag.knowledge_graph.intent import IntentAnalyzer, RelationshipReasoning
+from app.rag.knowledge_graph.prerequisite import PrerequisiteAnalyzer, Prerequisites
 from app.rag.types import MyCBEventType
 from app.core.config import settings
 from app.core.db import Scoped_Session
@@ -87,6 +88,10 @@ class KnowledgeGraphIndex(BaseIndex[IndexLPG]):
         self._intents = IntentAnalyzer(
             dspy_lm=dspy_lm,
             complied_program_path=settings.COMPLIED_INTENT_ANALYSIS_PROGRAM_PATH,
+        )
+        self._prerequisites_analyzer = PrerequisiteAnalyzer(
+            dspy_lm=dspy_lm,
+            compiled_program_path=settings.COMPLIED_PREREQUISITE_ANALYSIS_PROGRAM_PATH,
         )
 
         super().__init__(
@@ -206,14 +211,12 @@ class KnowledgeGraphIndex(BaseIndex[IndexLPG]):
             "All inserts are already upserts."
         )
 
-    def intent_based_search(
+    def intent_analyze(
         self,
         query: str,
         chat_history: list = [],
-        depth: int = 2,
-        include_meta: bool = False,
-        relationship_meta_filters: Dict = {},
-    ) -> Mapping[str, Any]:
+    ) -> List[str]:
+        """Analyze the intent of the query."""
         chat_content = query
         if len(chat_history) > 0:
             chat_history_strings = [
@@ -232,8 +235,48 @@ class KnowledgeGraphIndex(BaseIndex[IndexLPG]):
                 payload={EventPayload.QUERY_STR: chat_content},
             ) as event:
                 intents = self._intents.analyze(chat_content)
-                event.on_end(payload={"relationships": intents.relationships})
+                semantic_queries = [
+                    f"{r.source_entity} -> {r.relationship_desc} -> {r.target_entity}"
+                    for r in intents.relationships
+                ]
+                event.on_end(payload={"semantic_queries": semantic_queries})
 
+        return semantic_queries
+
+    def prerequisite_analyze(
+        self,
+        query: str,
+        chat_history: list = [],
+    ) -> List[str]:
+        """Analyze the prerequisite of the query."""
+        chat_content = query
+        if len(chat_history) > 0:
+            chat_history_strings = [
+                f"{message.role.value}: {message.content}" for message in chat_history
+            ]
+            query_with_history = (
+                "++++ Chat History ++++\n"
+                + "\n".join(chat_history_strings)
+                + "++++ Chat History ++++\n"
+            )
+            chat_content = query_with_history + "\n\nThen the user asksq:\n" + query
+
+        with self._callback_manager.as_trace("prerequisites_based_search"):
+            with self._callback_manager.event(
+                MyCBEventType.INTENT_DECOMPOSITION,
+                payload={EventPayload.QUERY_STR: chat_content},
+            ) as event:
+                prerequisites = self._prerequisites_analyzer.analyze(chat_content)
+                event.on_end(payload={"semantic_queries": prerequisites.questions})
+        return prerequisites.questions
+
+    def graph_semantic_search(
+        self,
+        semantic_queries: List[str],
+        depth: int = 2,
+        include_meta: bool = False,
+        relationship_meta_filters: Dict = {},
+    ) -> Mapping[str, Any]:
         result = {"queries": {}, "graph": None}
         all_entities = []
         all_relationships = defaultdict(
@@ -266,11 +309,6 @@ class KnowledgeGraphIndex(BaseIndex[IndexLPG]):
                         }
                     )
 
-        semantic_queries = [
-            f"{r.source_entity} -> {r.relationship_desc} -> {r.target_entity}"
-            for r in intents.relationships
-        ]
-
         def process_query(sub_query):
             logger.info(f"Processing query: {sub_query}")
             tmp_session = Scoped_Session()
@@ -293,35 +331,35 @@ class KnowledgeGraphIndex(BaseIndex[IndexLPG]):
                 Scoped_Session.remove()
             return sub_query, entities, relationships
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future_to_query = {
-                executor.submit(process_query, sub_query): sub_query
-                for sub_query in semantic_queries
-            }
-            for future in concurrent.futures.as_completed(future_to_query):
-                sub_query = future_to_query[future]
-                try:
-                    # It can't record the real execution time of the sub_query
-                    with self._callback_manager.as_trace("intent_based_search"):
-                        with self._callback_manager.event(
-                            MyCBEventType.GRAPH_SEMANTIC_SEARCH,
-                            payload={EventPayload.QUERY_STR: sub_query},
-                        ) as event:
-                            sub_query, entities, relationships = future.result()
-                            event.on_end(
-                                payload={
-                                    "entities": entities,
-                                    "relationships": relationships,
-                                },
-                            )
-                    result["queries"][sub_query] = {
-                        "entities": entities,
-                        "relationships": relationships,
+        with self._callback_manager.as_trace("intent_based_search"):
+            with self._callback_manager.event(
+                MyCBEventType.GRAPH_SEMANTIC_SEARCH,
+                payload={EventPayload.QUERY_STR: semantic_queries},
+            ) as event:
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future_to_query = {
+                        executor.submit(process_query, sub_query): sub_query
+                        for sub_query in semantic_queries
                     }
-                    all_entities.extend(entities)
-                    add_relationships(relationships)
-                except Exception as exc:
-                    logger.error(f"{sub_query} generated an exception: {exc}")
+                    for future in concurrent.futures.as_completed(future_to_query):
+                        sub_query = future_to_query[future]
+                        try:
+                            # It can't record the real execution time of the sub_query
+                            sub_query, entities, relationships = future.result()
+                            result["queries"][sub_query] = {
+                                "entities": entities,
+                                "relationships": relationships,
+                            }
+                            all_entities.extend(entities)
+                            add_relationships(relationships)
+                        except Exception as exc:
+                            logger.error(f"{sub_query} generated an exception: {exc}")
+
+                event.on_end(
+                    payload={
+                        "queries": result["queries"],
+                    },
+                )
 
         unique_entities = {e["id"]: e for e in all_entities}.values()
 

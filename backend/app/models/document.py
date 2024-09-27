@@ -10,9 +10,11 @@ from sqlmodel import (
     Text,
     DateTime,
     JSON,
+    String,
 )
 
 from .base import UpdatableBaseModel
+from app.types import MimeTypes
 
 
 class DocIndexTaskStatus(str, enum.Enum):
@@ -41,7 +43,7 @@ class Document(UpdatableBaseModel, table=True):
 
     def to_llama_document(self) -> LlamaDocument:
         return LlamaDocument(
-            id_=self.id,
+            id_=str(self.id),
             text=self.content,
             metadata=self.meta,
         )
