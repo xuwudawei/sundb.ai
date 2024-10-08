@@ -58,31 +58,25 @@ class Settings(BaseSettings):
         list[AnyUrl] | str, BeforeValidator(parse_cors)
     ] = []
 
-    PROJECT_NAME: str = "TiDB.AI"
+    PROJECT_NAME: str = "SunDB.AI"
     SENTRY_DSN: HttpUrl | None = None
 
     LOCAL_FILE_STORAGE_PATH: str = "/Users/apple/Desktop/Tsinghua/Research/tidb-xuwu.ai/shared/data"
 
-    # TIDB_HOST: str = "127.0.0.1"
-    # TIDB_PORT: int = 4000
-    # TIDB_USER: str = "root"
-    # TIDB_PASSWORD: str = ""
-    # TIDB_DATABASE: str
-    # TIDB_SSL: bool = True
 
-    TIDB_HOST: str = "localhost"
-    TIDB_PORT: int = 5432
-    TIDB_USER: str = "myuser"
-    TIDB_PASSWORD: str = "mypassword"
-    TIDB_DATABASE: str = "mydb"
-    TIDB_SSL: bool = False
+    PGDB_HOST: str = "localhost"
+    PGDB_PORT: int = 5432
+    PGDB_USER: str = "myuser"
+    PGDB_PASSWORD: str = "mypassword"
+    PGDB_DATABASE: str = "mydb"
+    PGDB_SSL: bool = False
 
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
     # TODO: move below config to `option` table, it should be configurable by staff in console
-    TIDB_AI_CHAT_ENDPOINT: str = "https://tidb.ai/api/v1/chats"
-    TIDB_AI_API_KEY: SecretStr | None = None
+    SUNDB_AI_CHAT_ENDPOINT: str = "http://localhost:3000/api/v1/chats"
+    SUNDB_AI_API_KEY: SecretStr | None = None
 
     COMPLIED_INTENT_ANALYSIS_PROGRAM_PATH: str | None = None
     COMPLIED_PREREQUISITE_ANALYSIS_PROGRAM_PATH: str | None = None
@@ -99,12 +93,12 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[misc]
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        return f"postgresql+psycopg2://{self.TIDB_USER}:{self.TIDB_PASSWORD}@{self.TIDB_HOST}:{self.TIDB_PORT}/{self.TIDB_DATABASE}?sslmode=disable"
+        return f"postgresql+psycopg2://{self.PGDB_USER}:{self.PGDB_PASSWORD}@{self.PGDB_HOST}:{self.PGDB_PORT}/{self.PGDB_DATABASE}?sslmode=disable"
 
     @computed_field  # type: ignore[misc]
     @property
     def SQLALCHEMY_ASYNC_DATABASE_URI(self) -> str:
-        return f"postgresql+asyncpg://{self.TIDB_USER}:{self.TIDB_PASSWORD}@{self.TIDB_HOST}:{self.TIDB_PORT}/{self.TIDB_DATABASE}?ssl=disable"
+        return f"postgresql+asyncpg://{self.PGDB_USER}:{self.PGDB_PASSWORD}@{self.PGDB_HOST}:{self.PGDB_PORT}/{self.PGDB_DATABASE}?ssl=disable"
 
     @model_validator(mode="after")
     def _validate_secrets(self) -> Self:

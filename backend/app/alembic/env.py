@@ -4,7 +4,6 @@ import pgvector
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
-# from tidb_vector.sqlalchemy import VectorType
 
 
 from app.core.config import settings

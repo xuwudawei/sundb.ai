@@ -302,7 +302,7 @@ def create_reranker_model(
     user: CurrentSuperuserDep,
 ) -> AdminRerankerModel:
     if reranker_model.is_default:
-        session.exec(update(RerankerModel).values(is_default=False))
+        session.execute(update(RerankerModel).values(is_default=False))
     session.add(reranker_model)
     session.commit()
     session.refresh(reranker_model)

@@ -129,12 +129,12 @@ Ensure your Conda environment is activated before proceeding.
   ENVIRONMENT=local
 
   # Database Configuration
-  TIDB_HOST=localhost
-  TIDB_PORT=5432
-  TIDB_USER=myuser
-  TIDB_PASSWORD=mypassword
-  TIDB_DATABASE=mydb
-  TIDB_SSL=False
+  PG_HOST=localhost
+  PG_PORT=5432
+  PG_USER=myuser
+  PG_PASSWORD=mypassword
+  PG_DATABASE=mydb
+  PG_SSL=False
 
   # Secret Key (generate a new one)
   SECRET_KEY=your_generated_secret_key_here

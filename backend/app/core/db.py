@@ -13,7 +13,7 @@ from pgvector.psycopg2 import register_vector  # Import pgvector registration
 from app.core.config import settings
 
 
-# TiDB Serverless clusters have a limitation: if there are no active connections for 5 minutes,
+# Serverless clusters have a limitation: if there are no active connections for 5 minutes,
 # they will shut down, which closes all connections, so we need to recycle the connections
 engine = create_engine(
     str(settings.SQLALCHEMY_DATABASE_URI),
@@ -47,7 +47,7 @@ async_engine = create_async_engine(
         # we can only config ssl in connect_args
         "ssl": get_ssl_context(),
     }
-    if settings.TIDB_SSL
+    if settings.PGDB_SSL
     else {},
 )
 
@@ -56,7 +56,7 @@ def prepare_db_connection(dbapi_connection, connection_record):
     # Register the vector type with psycopg2
     register_vector(dbapi_connection)
     cursor = dbapi_connection.cursor()
-    # In TiDB.AI, we store datetime in the database using UTC timezone.
+    # In SunDB.AI, we store datetime in the database using UTC timezone.
     # Therefore, we need to set the timezone to '+00:00'.
     cursor.execute("SET timezone = '+00:00'")
     cursor.close()

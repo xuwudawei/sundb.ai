@@ -9,7 +9,6 @@ Create Date: 2024-07-10 14:43:55.913126
 from alembic import op
 import sqlalchemy as sa
 import sqlmodel.sql.sqltypes
-# from tidb_vector.sqlalchemy import VectorType
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import mysql
 from app.core.config import settings

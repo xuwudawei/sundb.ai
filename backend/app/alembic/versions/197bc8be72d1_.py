@@ -9,7 +9,6 @@ Create Date: 2024-07-25 14:49:29.363595
 from alembic import op
 import sqlalchemy as sa
 import sqlmodel.sql.sqltypes
-# from tidb_vector.sqlalchemy import VectorType
 from pgvector.sqlalchemy import Vector
 
 

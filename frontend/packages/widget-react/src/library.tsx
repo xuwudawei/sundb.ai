@@ -49,7 +49,7 @@ loadConfig().then(async ({ settings, bootstrapStatus, experimentalFeatures }) =>
     </GtagProvider>,
   );
 }).catch((error) => {
-  console.error('Failed to initialize tidbai', error);
+  console.error('Failed to initialize SuDB.ai', error);
   Object.defineProperty(window, 'tidbai', {
     writable: false,
     value: {

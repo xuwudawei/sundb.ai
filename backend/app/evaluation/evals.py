@@ -28,7 +28,7 @@ DEFAULT_TIDB_AI_CHAT_ENGINE = "default"
 
 class Evaluation:
     """
-    Evaluate a dataset using TiDB AI and Langfuse.
+    Evaluate a dataset using SunDB AI and Langfuse.
 
     Args:
         dataset_name: The name of the dataset in langfuse to evaluate.
@@ -63,7 +63,7 @@ class Evaluation:
 
         llm_provider = llm_provider.lower()
         if llm_provider == "openai":
-            self._llama_llm = OpenAI(model="gpt-4o")
+            self._llama_llm = OpenAI(model="gpt-4o-mini")
         elif llm_provider == "gemini":
             self._llama_llm = Gemini(model="models/gemini-1.5-flash")
         else:
@@ -72,7 +72,7 @@ class Evaluation:
         self._metrics = {
             "language": LanguageEvaluator(llm=self._llama_llm),
             "toxicity": ToxicityEvaluator(llm=self._llama_llm),
-            "e2e_rag": E2ERagEvaluator(model="gpt-4o"),
+            "e2e_rag": E2ERagEvaluator(model="gpt-4o-mini"),
         }
 
     def run(self, metrics: list = DEFAULT_METRICS) -> None:
@@ -148,10 +148,10 @@ class Evaluation:
     @retry(stop=stop_after_attempt(2), wait=wait_fixed(5))
     def _generate_answer_by_tidb_ai(self, messages: list) -> str:
         response = requests.post(
-            settings.TIDB_AI_CHAT_ENDPOINT,
+            settings.SUNDB_AI_CHAT_ENDPOINT,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {settings.TIDB_AI_API_KEY}",
+                "Authorization": f"Bearer {settings.SUNDB_AI_API_KEY}",
             },
             json={
                 "messages": messages,

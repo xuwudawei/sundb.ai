@@ -6,11 +6,11 @@ import { requestUrl } from '@/lib/request';
 export async function loadConfig () {
   const [settings, bootstrapStatus, experimentalFeatures] = await Promise.all([
     getPublicSiteSettings().catch(error => {
-      console.error('Cannot initialize tidb.ai widget', error);
+      console.error('Cannot initialize sundb.ai widget', error);
       return Promise.reject(error);
     }),
     getBootstrapStatus().catch(error => {
-      console.error('TiDB.ai service not bootstrapped', error);
+      console.error('SunDB.ai service not bootstrapped', error);
       return Promise.reject(error);
     }),
     fetch(requestUrl(`/experimental-features`)).then(res => res.json() as Promise<Partial<ExperimentalFeatures>>),
