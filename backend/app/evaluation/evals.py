@@ -117,11 +117,16 @@ class Evaluation:
     def parse_sample(self, item: DatasetItemClient):
         expected_output = item.expected_output
         messages = []
+
+        print("Item Input:", item.input)  # Debugging statement
+
         if "history" in item.input:
             messages = [
                 {
-                    "role": message["role"],
-                    "content": message["content"],
+                    # "role": message["role"],
+                    # "content": message["content"],
+                    "role": message.get("role", "user"),  # Ensure there's a role
+                    "content": message.get("content", "")
                 }
                 for message in item.input["history"]
             ]
@@ -130,6 +135,13 @@ class Evaluation:
             messages.append({"role": "user", "content": item.input["userInput"]})
         elif "input" in item.input:
             messages.append({"role": "user", "content": item.input["input"]})
+
+        # Log a warning if messages are empty
+        if not messages:
+            logger.warning(f"Messages are empty for item with input: {item.input}")
+
+
+        print("Parsed Messages:", messages)  # Debugging statement
 
         sample_data = {
             "messages": messages,
@@ -147,20 +159,42 @@ class Evaluation:
 
     @retry(stop=stop_after_attempt(2), wait=wait_fixed(5))
     def _generate_answer_by_tidb_ai(self, messages: list) -> str:
-        response = requests.post(
-            settings.SUNDB_AI_CHAT_ENDPOINT,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {settings.SUNDB_AI_API_KEY}",
-            },
-            json={
-                "messages": messages,
-                "index": "default",
-                "chat_engine": self.tidb_ai_chat_engine,
-                "stream": False,
-            },
-        )
-        response.raise_for_status()
+        # response = requests.post(
+        #     settings.SUNDB_AI_CHAT_ENDPOINT,
+        #     headers={
+        #         "Content-Type": "application/json",
+        #         "Authorization": f"Bearer {settings.SUNDB_AI_API_KEY}",
+        #     },
+        #     json={
+        #         "messages": messages,
+        #         "index": "default",
+        #         # "chat_engine": self.tidb_ai_chat_engine,
+        #         "engine_name": self.tidb_ai_chat_engine,
+        #         "stream": False,
+        #     },
+        # )
+        # response.raise_for_status()
+        try:
+            response = requests.post(
+                settings.SUNDB_AI_CHAT_ENDPOINT,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {settings.SUNDB_AI_API_KEY}",
+                },
+                json={
+                    "messages": messages,
+                    "index": "default",
+                    # "chat_engine": self.tidb_ai_chat_engine,
+                    "engine_name": self.tidb_ai_chat_engine,  # Updated field #todo:modified by david
+                    "stream": False,
+                },
+            )
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as err:
+            print(f"HTTP error occurred: {err}")
+            print(f"Status Code: {response.status_code}")
+            print(f"Response Body: {response.text}")
+            raise
         data = response.json()
         trace_url = data["trace"]["langfuse_url"]
         answer = data["content"]

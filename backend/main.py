@@ -148,7 +148,7 @@ def runserver(host, port):
 
 @cli.command()
 @click.option(
-    "--dataset", default="regression", help="Dataset name, default=regression"
+    "--dataset", default="database", help="Dataset name, default=database"
 )
 @click.option(
     "--llm-provider",
