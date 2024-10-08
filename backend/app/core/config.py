@@ -48,7 +48,8 @@ class Settings(BaseSettings):
 
     LANGFUSE_HOST: str
     LANGFUSE_PUBLIC_KEY: str
-    LANGFUSE_SECRET_KEY: str
+    LANGFUSE_SECRET_KEY: str 
+
 
     @computed_field  # type: ignore[misc]
     @property
