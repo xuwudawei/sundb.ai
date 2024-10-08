@@ -46,9 +46,9 @@ class Settings(BaseSettings):
     BROWSER_ID_COOKIE_NAME: str = "bid"
     BROWSER_ID_COOKIE_MAX_AGE: int = 3600 * 24 * 365 * 2
 
-    LANGFUSE_HOST: str
-    LANGFUSE_PUBLIC_KEY: str
-    LANGFUSE_SECRET_KEY: str
+    # LANGFUSE_HOST: str
+    # LANGFUSE_PUBLIC_KEY: str
+    # LANGFUSE_SECRET_KEY: str
 
     @computed_field  # type: ignore[misc]
     @property
