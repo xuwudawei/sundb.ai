@@ -23,7 +23,7 @@ logger.setLevel(logging.DEBUG)
 
 @celery_app.task
 def import_documents_from_datasource(data_source_id: int):
-    print("\nNew code, Trying to import_documents_from_datasource")
+    print("\nNew process: Trying to import_documents_from_datasource")
     with Session(engine) as session:
         data_source = data_source_repo.get(session, data_source_id)
         if data_source is None:

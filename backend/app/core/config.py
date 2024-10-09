@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     # For example:
     #   maidalun1020/bce-embedding-base_v1: EMBEDDING_DIMS=768   EMBEDDING_MAX_TOKENS=512
     EMBEDDING_DIMS: int = 1536
-    EMBEDDING_MAX_TOKENS: int = 7900
+    EMBEDDING_MAX_TOKENS: int = 7000
 
     @computed_field  # type: ignore[misc]
     @property

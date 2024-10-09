@@ -38,6 +38,7 @@ def get_llm_by_data_source(session: Session, data_source: DataSource) -> LLM:
 
 @celery_app.task(bind=True)
 def build_vector_index_from_document(self, data_source_id: int, document_id: int):
+    print("\nNew process: Trying to build_vector_index_from_document")
     with Session(engine, expire_on_commit=False) as session:
         data_source = data_source_repo.get(session, data_source_id)
         print(f"Received data source: {data_source}")
