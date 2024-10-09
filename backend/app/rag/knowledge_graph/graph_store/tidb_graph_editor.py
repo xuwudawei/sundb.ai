@@ -88,7 +88,7 @@ def get_entity_subgraph(session: Session, entity: Entity) -> Tuple[list, list]:
     """
     Get the subgraph of an entity, including all related relationships and entities.
     """
-    relationships_queryset = session.exec(
+    relationships_queryset = session.scalars(
         select(Relationship)
         .options(
             joinedload(Relationship.source_entity),

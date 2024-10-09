@@ -310,129 +310,302 @@ class TiDBGraphStore(KnowledgeGraphStore):
             pred = self.merge_entities_prog(entities=entities)
             return pred.merged_entity
 
+    # def retrieve_with_weight(
+    #     self,
+    #     query: str,
+    #     embedding: list,
+    #     depth: int = 2,
+    #     include_meta: bool = False,
+    #     with_degree: bool = False,
+    #     with_chunks: bool = True,
+    #     # experimental feature to filter relationships based on meta, can be removed in the future
+    #     relationship_meta_filters: Dict = {},
+    #     session: Optional[Session] = None,
+    # ) -> Tuple[list, list, list]:
+        
+        
+    #     if not embedding:
+    #         assert query, "Either query or embedding must be provided"
+    #         embedding = get_query_embedding(query, self._embed_model)
+
+    #     relationships, entities = self.search_relationships_weight(
+    #         embedding,
+    #         [],
+    #         [],
+    #         with_degree=with_degree,
+    #         relationship_meta_filters=relationship_meta_filters,
+    #         session=session,
+    #     )
+
+    #     all_relationships = set(relationships)
+    #     all_entities = set(entities)
+    #     visited_entities = set(e.id for e in entities)
+    #     visited_relationships = set(r.id for r in relationships)
+
+    #     for _ in range(depth - 1):
+    #         actual_number = 0
+    #         progress = 0
+    #         search_number_each_depth = 10
+    #         for search_config in DEFAULT_RANGE_SEARCH_CONFIG:
+    #             search_ratio = search_config[1]
+    #             search_distance_range = search_config[0]
+    #             remaining_number = search_number_each_depth - actual_number
+    #             # calculate the expected number based search progress
+    #             # It's a accumulative search, so the expected number should be the difference between the expected number and the actual number
+    #             expected_number = (
+    #                 int(
+    #                     (search_ratio + progress) * search_number_each_depth
+    #                     - actual_number
+    #                 )
+    #                 if progress * search_number_each_depth > actual_number
+    #                 else int(search_ratio * search_number_each_depth)
+    #             )
+    #             if expected_number > remaining_number:
+    #                 expected_number = remaining_number
+    #             if remaining_number <= 0:
+    #                 break
+
+    #             new_relationships, new_entities = self.search_relationships_weight(
+    #                 embedding,
+    #                 visited_relationships,
+    #                 visited_entities,
+    #                 search_distance_range,
+    #                 rank_n=expected_number,
+    #                 with_degree=with_degree,
+    #                 relationship_meta_filters=relationship_meta_filters,
+    #                 session=session,
+    #             )
+
+    #             all_relationships.update(new_relationships)
+    #             all_entities.update(new_entities)
+
+    #             visited_entities.update(e.id for e in new_entities)
+    #             visited_relationships.update(r.id for r in new_relationships)
+    #             actual_number += len(new_relationships)
+    #             # seach ratio == 1 won't count the progress
+    #             if search_ratio != 1:
+    #                 progress += search_ratio
+
+    #     synopsis_entities = self.fetch_similar_entities(
+    #         embedding, top_k=2, entity_type=EntityType.synopsis, session=session
+    #     )
+    #     all_entities.update(synopsis_entities)
+
+    #     related_doc_ids = set()
+    #     for r in all_relationships:
+    #         if "doc_id" not in r.meta:
+    #             continue
+    #         related_doc_ids.add(r.meta["doc_id"])
+
+    #     entities = [
+    #         {
+    #             "id": e.id,
+    #             "name": e.name,
+    #             "description": e.description,
+    #             "meta": e.meta if include_meta else None,
+    #             "entity_type": e.entity_type,
+    #         }
+    #         for e in all_entities
+    #     ]
+    #     relationships = [
+    #         {
+    #             "id": r.id,
+    #             "source_entity_id": r.source_entity_id,
+    #             "target_entity_id": r.target_entity_id,
+    #             "description": r.description,
+    #             "rag_description": f"{r.source_entity.name} -> {r.description} -> {r.target_entity.name}",
+    #             "meta": r.meta,
+    #             "weight": r.weight,
+    #             "last_modified_at": r.last_modified_at,
+    #         }
+    #         for r in all_relationships
+    #     ]
+
+    #     chunks = []
+    #     session = session or self._session
+    #     if with_chunks:
+    #         chunks = [
+    #             # TODO: add last_modified_at
+    #             {"text": c[0], "link": c[1], "meta": c[2]}
+    #             for c in session.scalars(
+    #                 select(DBChunk.text, DBChunk.document_id, DBChunk.meta).where(
+    #                     DBChunk.id.in_(related_doc_ids)
+    #                 )
+    #             ).all()
+    #         ]
+
+    #     return entities, relationships, chunks
+
+
+
     def retrieve_with_weight(
-        self,
-        query: str,
-        embedding: list,
-        depth: int = 2,
-        include_meta: bool = False,
-        with_degree: bool = False,
-        with_chunks: bool = True,
-        # experimental feature to filter relationships based on meta, can be removed in the future
-        relationship_meta_filters: Dict = {},
-        session: Optional[Session] = None,
+    self,
+    query: str = None,
+    embedding: list = None,
+    depth: int = 2,
+    include_meta: bool = False,
+    with_degree: bool = False,
+    with_chunks: bool = True,
+    relationship_meta_filters: Dict = {},
+    session: Optional[Session] = None,
     ) -> Tuple[list, list, list]:
-        if not embedding:
-            assert query, "Either query or embedding must be provided"
-            embedding = get_query_embedding(query, self._embed_model)
-
-        relationships, entities = self.search_relationships_weight(
-            embedding,
-            [],
-            [],
-            with_degree=with_degree,
-            relationship_meta_filters=relationship_meta_filters,
-            session=session,
-        )
-
-        all_relationships = set(relationships)
-        all_entities = set(entities)
-        visited_entities = set(e.id for e in entities)
-        visited_relationships = set(r.id for r in relationships)
-
-        for _ in range(depth - 1):
-            actual_number = 0
-            progress = 0
-            search_number_each_depth = 10
-            for search_config in DEFAULT_RANGE_SEARCH_CONFIG:
-                search_ratio = search_config[1]
-                search_distance_range = search_config[0]
-                remaining_number = search_number_each_depth - actual_number
-                # calculate the expected number based search progress
-                # It's a accumulative search, so the expected number should be the difference between the expected number and the actual number
-                expected_number = (
-                    int(
-                        (search_ratio + progress) * search_number_each_depth
-                        - actual_number
-                    )
-                    if progress * search_number_each_depth > actual_number
-                    else int(search_ratio * search_number_each_depth)
-                )
-                if expected_number > remaining_number:
-                    expected_number = remaining_number
-                if remaining_number <= 0:
-                    break
-
-                new_relationships, new_entities = self.search_relationships_weight(
-                    embedding,
-                    visited_relationships,
-                    visited_entities,
-                    search_distance_range,
-                    rank_n=expected_number,
-                    with_degree=with_degree,
-                    relationship_meta_filters=relationship_meta_filters,
-                    session=session,
-                )
-
-                all_relationships.update(new_relationships)
-                all_entities.update(new_entities)
-
-                visited_entities.update(e.id for e in new_entities)
-                visited_relationships.update(r.id for r in new_relationships)
-                actual_number += len(new_relationships)
-                # seach ratio == 1 won't count the progress
-                if search_ratio != 1:
-                    progress += search_ratio
-
-        synopsis_entities = self.fetch_similar_entities(
-            embedding, top_k=2, entity_type=EntityType.synopsis, session=session
-        )
-        all_entities.update(synopsis_entities)
-
-        related_doc_ids = set()
-        for r in all_relationships:
-            if "doc_id" not in r.meta:
-                continue
-            related_doc_ids.add(r.meta["doc_id"])
-
-        entities = [
-            {
-                "id": e.id,
-                "name": e.name,
-                "description": e.description,
-                "meta": e.meta if include_meta else None,
-                "entity_type": e.entity_type,
-            }
-            for e in all_entities
-        ]
-        relationships = [
-            {
-                "id": r.id,
-                "source_entity_id": r.source_entity_id,
-                "target_entity_id": r.target_entity_id,
-                "description": r.description,
-                "rag_description": f"{r.source_entity.name} -> {r.description} -> {r.target_entity.name}",
-                "meta": r.meta,
-                "weight": r.weight,
-                "last_modified_at": r.last_modified_at,
-            }
-            for r in all_relationships
-        ]
-
-        chunks = []
         session = session or self._session
-        if with_chunks:
-            chunks = [
-                # TODO: add last_modified_at
-                {"text": c[0], "link": c[1], "meta": c[2]}
-                for c in session.scalars(
-                    select(DBChunk.text, DBChunk.document_id, DBChunk.meta).where(
-                        DBChunk.id.in_(related_doc_ids)
-                    )
-                ).all()
+
+        if not embedding and not query:
+            # Retrieve all entities and relationships
+            all_entities = session.query(DBEntity).all()
+            all_relationships = session.query(DBRelationship).all()
+            chunks = []
+
+            if with_chunks:
+                related_doc_ids = {
+                    r.meta["doc_id"] for r in all_relationships if "doc_id" in r.meta
+                }
+                if related_doc_ids:
+                    chunks = [
+                        {"text": c.text, "link": c.document_id, "meta": c.meta}
+                        for c in session.query(DBChunk)
+                        .filter(DBChunk.id.in_(related_doc_ids))
+                        .all()
+                    ]
+
+            entities = [
+                {
+                    "id": e.id,
+                    "name": e.name,
+                    "description": e.description,
+                    "meta": e.meta if include_meta else None,
+                    "entity_type": e.entity_type,
+                }
+                for e in all_entities
+            ]
+            relationships = [
+                {
+                    "id": r.id,
+                    "source_entity_id": r.source_entity_id,
+                    "target_entity_id": r.target_entity_id,
+                    "description": r.description,
+                    "rag_description": f"{r.source_entity.name} -> {r.description} -> {r.target_entity.name}",
+                    "meta": r.meta,
+                    "weight": r.weight,
+                    "last_modified_at": r.last_modified_at,
+                }
+                for r in all_relationships
             ]
 
-        return entities, relationships, chunks
+            return entities, relationships, chunks
+
+        else:
+            if not embedding:
+                assert query, "Either query or embedding must be provided"
+                embedding = get_query_embedding(query, self._embed_model)
+
+            relationships, entities = self.search_relationships_weight(
+                embedding,
+                [],
+                [],
+                with_degree=with_degree,
+                relationship_meta_filters=relationship_meta_filters,
+                session=session,
+            )
+
+            all_relationships = set(relationships)
+            all_entities = set(entities)
+            visited_entities = set(e.id for e in entities)
+            visited_relationships = set(r.id for r in relationships)
+
+            for _ in range(depth - 1):
+                actual_number = 0
+                progress = 0
+                search_number_each_depth = 10
+                for search_config in DEFAULT_RANGE_SEARCH_CONFIG:
+                    search_ratio = search_config[1]
+                    search_distance_range = search_config[0]
+                    remaining_number = search_number_each_depth - actual_number
+                    # calculate the expected number based search progress
+                    # It's a cumulative search, so the expected number should be the difference between the expected number and the actual number
+                    expected_number = (
+                        int(
+                            (search_ratio + progress) * search_number_each_depth
+                            - actual_number
+                        )
+                        if progress * search_number_each_depth > actual_number
+                        else int(search_ratio * search_number_each_depth)
+                    )
+                    if expected_number > remaining_number:
+                        expected_number = remaining_number
+                    if remaining_number <= 0:
+                        break
+
+                    new_relationships, new_entities = self.search_relationships_weight(
+                        embedding,
+                        visited_relationships,
+                        visited_entities,
+                        search_distance_range,
+                        rank_n=expected_number,
+                        with_degree=with_degree,
+                        relationship_meta_filters=relationship_meta_filters,
+                        session=session,
+                    )
+
+                    all_relationships.update(new_relationships)
+                    all_entities.update(new_entities)
+
+                    visited_entities.update(e.id for e in new_entities)
+                    visited_relationships.update(r.id for r in new_relationships)
+                    actual_number += len(new_relationships)
+                    # search ratio == 1 won't count the progress
+                    if search_ratio != 1:
+                        progress += search_ratio
+
+            synopsis_entities = self.fetch_similar_entities(
+                embedding, top_k=2, entity_type=EntityType.synopsis, session=session
+            )
+            all_entities.update(synopsis_entities)
+
+            related_doc_ids = set()
+            for r in all_relationships:
+                if "doc_id" not in r.meta:
+                    continue
+                related_doc_ids.add(r.meta["doc_id"])
+
+            entities = [
+                {
+                    "id": e.id,
+                    "name": e.name,
+                    "description": e.description,
+                    "meta": e.meta if include_meta else None,
+                    "entity_type": e.entity_type,
+                }
+                for e in all_entities
+            ]
+            relationships = [
+                {
+                    "id": r.id,
+                    "source_entity_id": r.source_entity_id,
+                    "target_entity_id": r.target_entity_id,
+                    "description": r.description,
+                    "rag_description": f"{r.source_entity.name} -> {r.description} -> {r.target_entity.name}",
+                    "meta": r.meta,
+                    "weight": r.weight,
+                    "last_modified_at": r.last_modified_at,
+                }
+                for r in all_relationships
+            ]
+
+            chunks = []
+            if with_chunks:
+                chunks = [
+                    {"text": c[0], "link": c[1], "meta": c[2]}
+                    for c in session.scalars(
+                        select(DBChunk.text, DBChunk.document_id, DBChunk.meta).where(
+                            DBChunk.id.in_(related_doc_ids)
+                        )
+                    ).all()
+                ]
+
+            return entities, relationships, chunks
+
 
     # Function to fetch degrees for entities
     def fetch_entity_degrees(
