@@ -64,7 +64,7 @@ admin_reranker_model_options: List[RerankerModelOption] = [
     RerankerModelOption(
         provider=RerankerProvider.LOCAL,
         provider_display_name="Local Reranker",
-        provider_description="TIDB.AI's local reranker server, deployed on your own infrastructure and powered by sentence-transformers.",
+        provider_description="SunDB.AI's local reranker server, deployed on your own infrastructure and powered by sentence-transformers.",
         default_reranker_model="BAAI/bge-reranker-v2-m3",
         reranker_model_description="Find more models in huggingface.",
         default_top_n=10,

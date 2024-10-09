@@ -84,8 +84,8 @@ Example:
 
 Chat History:
 
-Human: "I'm interested in the performance improvements in the latest version of TiDB."
-Assistant: "TiDB version 8.1 was released recently with significant performance enhancements over version 6.5."
+Human: "I'm interested in the performance improvements in the latest version of SunDB."
+Assistant: "SunDB version 8.1 was released recently with significant performance enhancements over version 6.5."
 
 Follow-up Question:
 
@@ -93,14 +93,14 @@ Follow-up Question:
 
 Prerequisite Questions and Relevant Knowledge:
 
-- Prerequisite Question: What is the latest version of TiDB?
-- Relevant Knowledge: The latest version of TiDB is 8.1.
+- Prerequisite Question: What is the latest version of SunDB?
+- Relevant Knowledge: The latest version of SunDB is 8.1.
 
 ...
 
 Refined Standalone Question:
 
-"Can you provide detailed information about the performance improvements introduced in TiDB version 8.1 compared to version 6.5?"
+"Can you provide detailed information about the performance improvements introduced in SunDB version 8.1 compared to version 6.5?"
 
 Your Turn:
 
@@ -141,14 +141,14 @@ Use markdown footnote syntax (for example: [^1]) to indicate sources you used.
 Each footnote must correspond to a unique source. Do not use the same source for multiple footnotes.
 
 ### Examples of Correct Footnote Usage (no the unique sources and diverse sources):
-[^1]: [TiDB Overview | PingCAP Docs](https://docs.pingcap.com/tidb/stable/overview)
-[^2]: [TiDB Architecture | PingCAP Docs](https://docs.pingcap.com/tidb/stable/architecture)
+[^1]: [SunDB Overview | Docs](https://github.com/xuwudawei/tidb.ai)
+[^2]: [SunDB Architecture | Docs](https://github.com/xuwudawei/tidb.ai)
 
 ### Examples of Incorrect Footnote Usage (Avoid duplicating the same source for multiple footnotes):
-[^1]: [TiDB Introduction | PingCAP Docs](https://docs.pingcap.com/tidb/v5.4/overview)
-[^2]: [TiDB Introduction | PingCAP Docs](https://docs.pingcap.com/tidb/v5.4/overview)
-[^3]: [TiDB Introduction | PingCAP Docs](https://docs.pingcap.com/tidb/dev/overview)
-[^4]: [TiDB Introduction | PingCAP Docs](https://docs.pingcap.com/tidb/stable/overview)
+[^1]: [SunDB Introduction | Docs](https://github.com/xuwudawei/tidb.ai)
+[^2]: [SunDB Introduction | Docs](https://github.com/xuwudawei/tidb.ai)
+[^3]: [SunDB Introduction | Docs](https://github.com/xuwudawei/tidb.ai)
+[^4]: [SunDB Introduction | Docs](https://github.com/xuwudawei/tidb.ai)
 
 ---------------------
 

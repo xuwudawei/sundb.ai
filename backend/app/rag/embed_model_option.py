@@ -76,7 +76,7 @@ admin_embed_model_options: List[EmbeddingModelOption] = [
     EmbeddingModelOption(
         provider=EmbeddingProvider.LOCAL,
         provider_display_name="Local Embedding",
-        provider_description="TIDB.AI's local embedding server, deployed on your own infrastructure and powered by sentence-transformers.",
+        provider_description=".AI's local embedding server, deployed on your own infrastructure and powered by sentence-transformers.",
         default_embedding_model="BAAI/bge-m3",
         embedding_model_description="Find more models in huggingface.",
         default_config={
