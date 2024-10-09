@@ -330,6 +330,71 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 ---
 
+## Running Evaluations on SunDB AI with Langfuse Integration
+
+To run an evaluation on a dataset using SunDB AI and Langfuse, follow these steps:
+
+### 1. Activate the Conda Environment
+
+First, activate the relevant Conda environment:
+
+```bash
+conda activate myenv
+```
+
+### 2. Navigate to the Backend Directory
+
+Change your working directory to the backend folder of your project:
+
+```bash
+cd backend
+```
+
+### 3. Set Environment Variables
+
+Set the required environment variables for `Langfuse`, `OpenAI`, and the application. Replace the placeholder values with your actual keys:
+
+```bash
+export LANGFUSE_HOST=https://us.cloud.langfuse.com
+export LANGFUSE_PUBLIC_KEY=your_langfuse_public_key_here
+export LANGFUSE_SECRET_KEY=your_langfuse_secret_key_here
+export SECRET_KEY=your_application_secret_key_here
+export OPENAI_API_KEY=your_openai_api_key_here
+```
+
+To obtain these keys:
+- **Langfuse Keys**: Log into [Langfuse](https://langfuse.com) , create a project and navigate to the API Keys section to generate your `PUBLIC_KEY` and `SECRET_KEY`.
+- **OpenAI API Key**: Sign in to the [OpenAI platform](https://platform.openai.com/) to create and retrieve your API key.
+
+### 4. Run the Evaluation Script
+
+Once the environment variables are set, run the following command to start the evaluation:
+
+```bash
+python main.py runeval --dataset <dataset_name> --llm-provider <llm_provider> --run-name <run_name> --tidb-ai-chat-engine <chat_engine>
+```
+
+- Replace `<dataset_name>` with the name of your dataset (e.g., `electrical`).
+- Use `openai` or `gemini` as `<llm_provider>`.
+- Optionally set `<run_name>` to track different runs (e.g., `test_run`).
+- Use `default` for the `<chat_engine>` unless using a custom one.
+
+Example:
+
+```bash
+python main.py runeval --dataset electrical --llm-provider openai --run-name test_run --tidb-ai-chat-engine default
+```
+
+### 5. Ensure Dependencies Are Running
+
+Before starting the evaluation, ensure that the project is up and running using the instructions above.
+
+### 6. Ensure Dependencies Are Running
+
+Log into [Langfuse](https://langfuse.com) and navigate to your project to visualize the evaluation progress.
+
+---
+
 ## Contact and Support
 
 If you encounter any issues during setup, please consult the project's documentation or reach out to the development team for assistance.
