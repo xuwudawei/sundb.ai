@@ -389,7 +389,7 @@ python main.py runeval --dataset electrical --llm-provider openai --run-name tes
 
 Before starting the evaluation, ensure that the project is up and running using the instructions above.
 
-### 6. Ensure Dependencies Are Running
+### 6. Visualize Evaluation Process
 
 Log into [Langfuse](https://langfuse.com) and navigate to your project to visualize the evaluation progress.
 
