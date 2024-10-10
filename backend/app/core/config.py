@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "SunDB.AI"
     SENTRY_DSN: HttpUrl | None = None
 
-    LOCAL_FILE_STORAGE_PATH: str = "/Users/apple/Desktop/Tsinghua/Research/tidb-xuwu.ai/shared/data"
+    LOCAL_FILE_STORAGE_PATH: str = "/shared/data"
 
 
     PGDB_HOST: str = "localhost"
