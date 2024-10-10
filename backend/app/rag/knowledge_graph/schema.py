@@ -11,8 +11,8 @@ class Entity(BaseModel):
     description: str = Field(
         description=(
             "Description of the entity, it should be a complete and comprehensive sentence, not few words. "
-            "Sample description of entity 'TiDB in-place upgrade': "
-            "'Upgrade TiDB component binary files to achieve upgrade, generally use rolling upgrade method'"
+            "Sample description of entity 'SunDB in-place upgrade': "
+            "'Upgrade SunDB component binary files to achieve upgrade, generally use rolling upgrade method'"
         )
     )
     metadata: Mapping[str, Any] = Field(
@@ -65,7 +65,7 @@ class Relationship(BaseModel):
     relationship_desc: str = Field(
         description=(
             "Description of the relationship, it should be a complete and comprehensive sentence, not few words. "
-            "Sample relationship description: 'TiDB will release a new LTS version every 6 months.'"
+            "Sample relationship description: 'SunDB will release a new LTS version every 6 months.'"
         )
     )
 
