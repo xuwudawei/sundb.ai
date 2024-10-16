@@ -12,17 +12,21 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from llama_index.llms.gemini import Gemini
 from llama_index.llms.openai import OpenAI
 
+
 from app.core.config import settings
 from app.evaluation.evaluators import (
     LanguageEvaluator,
     ToxicityEvaluator,
     E2ERagEvaluator,
+    CorrectnessEvaluator,
+    ContextCorrectnessEvaluator,
+    ContextRelevanceEvaluator,
 )
 
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_METRICS = ["toxicity", "language"]
+DEFAULT_METRICS = ["toxicity", "language","correctness","contextcorrectness","contextrelevance"]
 DEFAULT_TIDB_AI_CHAT_ENGINE = "default"
 
 
@@ -73,6 +77,9 @@ class Evaluation:
             "language": LanguageEvaluator(llm=self._llama_llm),
             "toxicity": ToxicityEvaluator(llm=self._llama_llm),
             "e2e_rag": E2ERagEvaluator(model="gpt-4o-mini"),
+            "correctness": CorrectnessEvaluator(model="gpt-4o-mini"),
+            "contextcorrectness": ContextCorrectnessEvaluator(model="gpt-4o-mini"),
+            "contextrelevance": ContextRelevanceEvaluator(llm=self._llama_llm)
         }
 
     def run(self, metrics: list = DEFAULT_METRICS) -> None:
@@ -81,8 +88,9 @@ class Evaluation:
                 continue
 
             sample_data = self.parse_sample(item)
-            output, trace_id = self._generate_answer_by_tidb_ai(sample_data["messages"])
+            output, trace_id = self._generate_answer_by_tidb_ai(sample_data["messages"],retrieval_context=sample_data.get("retrieval_context", []))
             trace_data = fetch_rag_data(self.langfuse, trace_id)
+            contexts = trace_data.get("retrieval_context", [])
             question = json.dumps(sample_data["messages"])
             item.link(
                 trace_or_observation=None,
@@ -95,7 +103,7 @@ class Evaluation:
                 result = evaluator.evaluate(
                     query=question,
                     response=output,
-                    contexts=trace_data.get("retrieval_context", []),
+                    contexts=contexts,
                     reference=sample_data.get("expected_output", None),
                 )
                 if isinstance(result, dict):
@@ -115,7 +123,7 @@ class Evaluation:
                     )
 
     def parse_sample(self, item: DatasetItemClient):
-        expected_output = item.expected_output
+        expected_output = item.expected_output.strip()
         messages = []
 
         print("Item Input:", item.input)  # Debugging statement
@@ -131,10 +139,18 @@ class Evaluation:
                 for message in item.input["history"]
             ]
 
-        if "userInput" in item.input:
+        # if "userInput" in item.input:
+        #     messages.append({"role": "user", "content": item.input["userInput"]})
+        # elif "input" in item.input:
+        #     messages.append({"role": "user", "content": item.input["input"]})
+        if "user_input" in item.input:
+            messages.append({"role": "user", "content": item.input["user_input"]})
+        elif "userInput" in item.input:
             messages.append({"role": "user", "content": item.input["userInput"]})
         elif "input" in item.input:
             messages.append({"role": "user", "content": item.input["input"]})
+        else:
+            logger.warning(f"No valid user input found in item: {item.input}")
 
         # Log a warning if messages are empty
         if not messages:
@@ -158,22 +174,24 @@ class Evaluation:
         return sample_data
 
     @retry(stop=stop_after_attempt(2), wait=wait_fixed(5))
-    def _generate_answer_by_tidb_ai(self, messages: list) -> str:
-        # response = requests.post(
-        #     settings.SUNDB_AI_CHAT_ENDPOINT,
-        #     headers={
-        #         "Content-Type": "application/json",
-        #         "Authorization": f"Bearer {settings.SUNDB_AI_API_KEY}",
-        #     },
-        #     json={
-        #         "messages": messages,
-        #         "index": "default",
-        #         # "chat_engine": self.tidb_ai_chat_engine,
-        #         "engine_name": self.tidb_ai_chat_engine,
-        #         "stream": False,
-        #     },
-        # )
-        # response.raise_for_status()
+    def _generate_answer_by_tidb_ai(self, messages: list, retrieval_context: list) -> typing.Tuple[str, str]:
+        # Include the retrieval context in the system prompt
+        if retrieval_context:
+            context_text = "\n".join(retrieval_context)
+            messages.insert(0, {
+                "role": "system",
+                "content": f"Please use the following context to answer the question:\n{context_text}"
+            })
+
+        # Modify the last user message to include the instruction
+        if messages and messages[-1]['role'] == 'user':
+            messages[-1]['content'] += (
+                "\n\nPlease answer in the following format:\n"
+                "- For single-choice questions, provide the letter corresponding to the correct option (e.g., 'A').\n"
+                "- For multiple-choice questions, provide all correct option letters together without spaces or punctuation (e.g., 'BC').\n"
+                "Do not include any additional text or explanations in your answer."
+            )
+
         try:
             response = requests.post(
                 settings.SUNDB_AI_CHAT_ENDPOINT,
@@ -197,7 +215,7 @@ class Evaluation:
             raise
         data = response.json()
         trace_url = data["trace"]["langfuse_url"]
-        answer = data["content"]
+        answer = data["content"].strip() 
         return answer, parse_langfuse_trace_id_from_url(trace_url)
 
 
