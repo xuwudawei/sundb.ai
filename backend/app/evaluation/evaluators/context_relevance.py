@@ -28,25 +28,58 @@ class ContextRelevanceEvaluator:
         selected_answers_text = ', '.join(selected_options)
 
         prompt_template = Prompt(template="""
-        Question:
+        
+        You are an expert evaluator specializing in assessing the relevance of selected answers to the provided context.
+
+        **Objective:**
+
+        - Evaluate how accurately and thoroughly the selected answer(s) address the question, based on the given context.
+
+        **Instructions:**
+
+        1. **Understand the Context:**
+        - Carefully read and comprehend the context provided.
+        - Identify key information, facts, and details relevant to the question.
+
+        2. **Analyze the Selected Answers:**
+        - Review each selected answer option.
+        - Determine how each option relates to the context.
+
+        3. **Evaluate Relevance:**
+        - Assess whether each selected option is supported by the context.
+        - Consider both direct and indirect references.
+
+        4. **Provide a Detailed Evaluation:**
+        - **Assign a score between 0.00 and 1.00 (two decimal places), where:**
+            - **1.00** indicates the selected answers are fully relevant and supported by the context.
+            - **0.00** indicates the selected answers are not relevant or contradict the context.
+        - **Provide a concise explanation (one or two sentences) justifying the score.**
+
+        **Constraints:**
+
+        - **Base your evaluation solely on the provided context and selected answers.**
+        - **Do not include any external information or assumptions.**
+        - **Do not mention irrelevant options.**
+
+        **Response Format (strictly adhere to this format):**
+        Score: <score> 
+        Explanation: <your explanation>
+
+
+        **Question:**
+
         {query}
 
-        Context:
+        **Context:**
+
         {context_text}
 
-        Selected Answer(s):
+        **Selected Answer(s):**
+
         {selected_answers_text}
 
-        Evaluate how relevant the selected answer(s) are to the context provided.
+        **Your Evaluation:**
 
-        Provide a score between 0 and 1, where:
-        - 1 means the selected answers are highly relevant to the context.
-        - 0 means the selected answers are not relevant to the context.
-        Also, provide a brief explanation.
-
-        Response format:
-        Score: <score>
-        Explanation: <your explanation>
         """)
 
         prompt_args = {

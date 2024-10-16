@@ -26,7 +26,14 @@ from app.evaluation.evaluators import (
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_METRICS = ["toxicity", "language","correctness","contextcorrectness","contextrelevance"]
+DEFAULT_METRICS = [
+        "e2e_rag",
+        # "toxicity", 
+        # "language",
+        # "correctness",
+        # "contextcorrectness",
+        # "contextrelevance"
+        ]
 DEFAULT_TIDB_AI_CHAT_ENGINE = "default"
 
 
@@ -74,12 +81,12 @@ class Evaluation:
             raise ValueError(f"Invalid LLM provider: {llm_provider}")
 
         self._metrics = {
-            "language": LanguageEvaluator(llm=self._llama_llm),
-            "toxicity": ToxicityEvaluator(llm=self._llama_llm),
+            # "language": LanguageEvaluator(llm=self._llama_llm),
+            # "toxicity": ToxicityEvaluator(llm=self._llama_llm),
             "e2e_rag": E2ERagEvaluator(model="gpt-4o-mini"),
-            "correctness": CorrectnessEvaluator(model="gpt-4o-mini"),
-            "contextcorrectness": ContextCorrectnessEvaluator(model="gpt-4o-mini"),
-            "contextrelevance": ContextRelevanceEvaluator(llm=self._llama_llm)
+            # "correctness": CorrectnessEvaluator(model="gpt-4o-mini"),
+            # "contextcorrectness": ContextCorrectnessEvaluator(model="gpt-4o-mini"),
+            # "contextrelevance": ContextRelevanceEvaluator(llm=self._llama_llm)
         }
 
     def run(self, metrics: list = DEFAULT_METRICS) -> None:
@@ -186,10 +193,14 @@ class Evaluation:
         # Modify the last user message to include the instruction
         if messages and messages[-1]['role'] == 'user':
             messages[-1]['content'] += (
+                "You only provides answers in the exact format requested."
                 "\n\nPlease answer in the following format:\n"
-                "- For single-choice questions, provide the letter corresponding to the correct option (e.g., 'A').\n"
-                "- For multiple-choice questions, provide all correct option letters together without spaces or punctuation (e.g., 'BC').\n"
-                "Do not include any additional text or explanations in your answer."
+                "- For single-choice questions, reply with only the letter corresponding to the correct option (e.g., 'A').\n"
+                "- For multiple-choice questions, reply only with all correct option letters together without spaces or punctuation (e.g., 'BC').\n"
+                "Do not include any additional text or explanations in your answer. Only provide the letters of the correct options."
+                "Do not include any additional text beyond what is specified in the response format."
+                "Do not include any additional text outside of this format."
+
             )
 
         try:

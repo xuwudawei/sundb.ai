@@ -17,6 +17,59 @@ class ContextCorrectnessEvaluator:
             threshold=self._threshold, model=self._model, include_reason=True
         )
 
+        self._prompt_template = """
+You are an expert evaluator specializing in assessing the relevance and correctness of answers based on provided context.
+
+**Objective:**
+
+- Evaluate how accurately and thoroughly the response addresses the question, based on the given context.
+
+**Instructions:**
+
+1. **Understand the Context:**
+   - Carefully read and comprehend the context provided.
+   - Identify key information, facts, and details relevant to the question.
+
+2. **Analyze the Response:**
+   - Review the response thoroughly.
+   - Determine how the response relates to the context and question.
+
+3. **Evaluate Correctness and Relevance:**
+   - Assess whether the response is correct and fully supported by the context.
+   - Consider both direct and indirect references.
+
+4. **Provide a Detailed Evaluation:**
+   - **Assign a score between 0.00 and 1.00 (two decimal places), where:**
+     - **1.00** indicates the response is fully correct and relevant.
+     - **0.00** indicates the response is incorrect or not relevant.
+   - **Provide a concise explanation (one or two sentences) justifying the score.**
+
+**Constraints:**
+
+- **Base your evaluation solely on the provided context and response.**
+- **Do not include any external information or assumptions.**
+- **Do not mention irrelevant information.**
+
+**Response Format (strictly adhere to this format):**
+
+Score: <score> 
+Explanation: <your explanation>
+**Question:**
+
+{input}
+
+**Context:**
+
+{retrieval_context}
+
+**Response:**
+
+{actual_output}
+
+**Your Evaluation:**
+
+"""
+
     def evaluate(
         self,
         query: Optional[str] = None,
@@ -39,6 +92,10 @@ class ContextCorrectnessEvaluator:
                     metrics=[self._context_correctness_metric],
                     print_results=False,
                     show_indicator=False,
+                    hyperparameters={
+                        "model": self._model,
+                        "prompt template": self._prompt_template
+                    },
                 )
                 break  # Exit loop if successful
             except ValueError as e:
