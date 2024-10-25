@@ -1,6 +1,8 @@
 from uuid import UUID
 from typing import List, Optional
 from http import HTTPStatus
+from fastapi import Response
+
 
 from pydantic import (
     BaseModel,
@@ -165,7 +167,11 @@ def delete_chat(session: SessionDep, user: CurrentUserDep, chat_id: UUID):
 
     if not user_can_edit_chat(chat, user):
         raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Access denied")
-    return chat_repo.delete(session, chat)
+    
+    chat_repo.delete(session, chat)
+    # Return a 204 No Content response
+    return Response(status_code=HTTPStatus.NO_CONTENT)
+    
 
 
 class SubgraphResponse(BaseModel):
