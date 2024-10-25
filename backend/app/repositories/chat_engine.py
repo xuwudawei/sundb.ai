@@ -14,7 +14,7 @@ class ChatEngineRepo(BaseRepo):
 
     def get(self, session: Session, id: int) -> Optional[ChatEngine]:
         return session.exec(
-            select(ChatEngine).where(ChatEngine.id == id, ChatEngine.deleted_at == None)
+            select(ChatEngine).where(ChatEngine.id == id, ChatEngine.deleted_at.is_(None))
         ).first()
 
     def paginate(
@@ -22,7 +22,7 @@ class ChatEngineRepo(BaseRepo):
         session: Session,
         params: Params | None = Params(),
     ) -> Page[ChatEngine]:
-        query = select(ChatEngine).where(ChatEngine.deleted_at == None)
+        query = select(ChatEngine).where(ChatEngine.deleted_at.is_(None))
         # Make sure the default engine is always on top
         query = query.order_by(ChatEngine.is_default.desc(), ChatEngine.name)
         return paginate(session, query, params)
@@ -30,7 +30,7 @@ class ChatEngineRepo(BaseRepo):
     def get_default_engine(self, session: Session) -> Optional[ChatEngine]:
             result = session.scalars(
                 select(ChatEngine).where(
-                    ChatEngine.is_default == True, ChatEngine.deleted_at == None
+                    ChatEngine.is_default == True, ChatEngine.deleted_at.is_(None)
                 )
             )
             return result.first()
@@ -38,7 +38,7 @@ class ChatEngineRepo(BaseRepo):
     def get_engine_by_name(self, session: Session, name: str) -> Optional[ChatEngine]:
         return session.exec(
             select(ChatEngine).where(
-                ChatEngine.name == name, ChatEngine.deleted_at == None
+                ChatEngine.name == name, ChatEngine.deleted_at.is_(None)
             )
         ).first()
 
