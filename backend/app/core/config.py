@@ -1,5 +1,7 @@
 import enum
 from typing import Annotated, Any
+from dotenv import load_dotenv
+import os
 
 from pydantic import (
     AnyUrl,
@@ -14,6 +16,12 @@ from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
+
+try:
+    load_dotenv()
+    print(os.environ.get("SECRET_KEY"))
+except Exception as e:
+    print(f"Error loading .env file: {e}")
 
 def parse_cors(v: Any) -> list[str] | str:
     if isinstance(v, str) and not v.startswith("["):
@@ -34,7 +42,7 @@ class Settings(BaseSettings):
         env_file=".env", env_ignore_empty=True, extra="ignore"
     )
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str
+    SECRET_KEY: str = os.environ.get("SECRET_KEY")
     DOMAIN: str = "localhost"
     ENVIRONMENT: Environment = Environment.LOCAL
 
@@ -65,11 +73,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "SunDB.AI"
     SENTRY_DSN: HttpUrl | None = None
 
-    LOCAL_FILE_STORAGE_PATH: str = "/hd1/lyx/sundbai/data"
+    LOCAL_FILE_STORAGE_PATH: str = os.environ.get("LOCAL_FILE_STORAGE_PATH", "/hd1/lyx/sundbai/data")
 
 
     PGDB_HOST: str = "localhost"
-    PGDB_PORT: int = 5433
+    PGDB_PORT: int = int(os.environ.get("PGDB_PORT", "5433"))
     PGDB_USER: str = "myuser"
     PGDB_PASSWORD: str = "mypassword"
     PGDB_DATABASE: str = "mydb"
