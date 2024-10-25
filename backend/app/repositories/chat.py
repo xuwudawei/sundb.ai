@@ -22,14 +22,14 @@ class ChatRepo(BaseRepo):
         browser_id: str | None,
         params: Params | None = Params(),
     ) -> Page[Chat]:
-        query = select(Chat).where(Chat.deleted_at == None)
+        query = select(Chat).where(Chat.deleted_at.is_(None))
         if user:
             if not user.is_superuser:
                 query = query.where(
-                    or_(Chat.user_id == user.id, Chat.browser_id == browser_id)
+                    or_(Chat.user_id.is_(None), Chat.browser_id == browser_id)
                 )
         else:
-            query = query.where(Chat.browser_id == browser_id, Chat.user_id == None)
+            query = query.where(Chat.browser_id == browser_id, Chat.user_id.is_(None))
         query = query.order_by(Chat.created_at.desc())
         return paginate(session, query, params)
 
@@ -39,7 +39,7 @@ class ChatRepo(BaseRepo):
         chat_id: UUID,
     ) -> Optional[Chat]:
         return session.scalars(
-            select(Chat).where(Chat.id == chat_id, Chat.deleted_at == None)
+            select(Chat).where(Chat.id == chat_id, Chat.deleted_at.is_(None))
         ).first()
 
     def update(
@@ -87,7 +87,7 @@ class ChatRepo(BaseRepo):
         return session.scalars(
             select(ChatMessage).where(
                 ChatMessage.id == chat_message_id,
-                ChatMessage.chat.has(Chat.deleted_at == None),
+                ChatMessage.chat.has(Chat.deleted_at.is_(None)),
             )
         ).first()
 
