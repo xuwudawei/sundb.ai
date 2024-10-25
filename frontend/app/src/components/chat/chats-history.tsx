@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { TrashIcon } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import useSWR from 'swr';
 
-export function ChatsHistory () {
+export function ChatsHistory() {
+  const router = useRouter(); // Initialize router
   const pathname = usePathname();
   const auth = useAuth();
   const user = auth.me;
@@ -44,6 +45,9 @@ export function ChatsHistory () {
               asChild
               action={async () => {
                 await deleteChat(chat.id).finally(() => mutate(history => history, { revalidate: true }));
+                if (isActive(chat)) {
+                  router.push('/'); // Redirect to the home page or another appropriate page
+                }
               }}
               dialogTitle={`Are you sure to delete ${chat.title}?`}
               dialogDescription="This action cannot be undone."
