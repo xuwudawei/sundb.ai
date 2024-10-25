@@ -274,6 +274,7 @@ def get_embedding_model(
         case EmbeddingProvider.LOCAL:
             return LocalEmbedding(
                 model=model,
+                api_key=credentials,
                 **config,
             )
         case _:

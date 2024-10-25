@@ -58,7 +58,7 @@ def create_llm(
     user: CurrentSuperuserDep,
 ) -> AdminLLM:
     if llm.is_default:
-        session.exec(update(LLM).values(is_default=False))
+        session.execute(update(LLM).values(is_default=False))
     session.add(llm)
     session.commit()
     session.refresh(llm)

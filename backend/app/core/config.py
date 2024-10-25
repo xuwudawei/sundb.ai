@@ -65,11 +65,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "SunDB.AI"
     SENTRY_DSN: HttpUrl | None = None
 
-    LOCAL_FILE_STORAGE_PATH: str = "/shared/data"
+    LOCAL_FILE_STORAGE_PATH: str = "/hd1/lyx/sundbai/data"
 
 
     PGDB_HOST: str = "localhost"
-    PGDB_PORT: int = 5432
+    PGDB_PORT: int = 5433
     PGDB_USER: str = "myuser"
     PGDB_PASSWORD: str = "mypassword"
     PGDB_DATABASE: str = "mydb"
