@@ -14,6 +14,8 @@ from sqlmodel import (
 # from tidb_vector.sqlalchemy import VectorType
 from pgvector.sqlalchemy import Vector
 
+from app.core.config import settings
+
 
 class SemanticCache(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
