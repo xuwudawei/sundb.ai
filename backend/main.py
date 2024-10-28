@@ -2,7 +2,7 @@ import warnings
 import logging
 from logging.config import dictConfig
 from contextlib import asynccontextmanager
-
+import dspy
 import click
 import sentry_sdk
 import uvicorn
@@ -63,6 +63,13 @@ logger.setLevel(logging.DEBUG)
 
 load_dotenv()
 
+# lm = dspy.OpenAI(
+#     model='gpt-3.5-turbo-instruct',
+#     api_base='https://api.chatanywhere.tech/v1',
+#     api_key='your-api-key',
+# )
+# dspy.configure(lm=lm)
+
 
 def custom_generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
@@ -72,13 +79,8 @@ if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
     sentry_sdk.init(
         dsn=str(settings.SENTRY_DSN),
         enable_tracing=True,
-        # Set traces_sample_rate to 1.0 to capture 100%
-        # of transactions for performance monitoring.
-        traces_sample_rate=1.0,
-        # Set profiles_sample_rate to 1.0 to profile 100%
-        # of sampled transactions.
-        # We recommend adjusting this value in production.
-        profiles_sample_rate=1.0,
+        traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        profiles_sample_rate=settings.SENTRY_PROFILES_SAMPLE_RATE,
     )
 
 
