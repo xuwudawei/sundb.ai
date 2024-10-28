@@ -1,12 +1,16 @@
+import json
 import time
 import logging
+import re
+
 from uuid import UUID
-from typing import List, Generator, Optional, Tuple
+from typing import List, Generator, Optional, Tuple, Type
 from datetime import datetime, UTC
 from urllib.parse import urljoin
 
 import requests
 import jinja2
+from pydantic import BaseModel
 from sqlmodel import Session, select, func
 from llama_index.core import VectorStoreIndex
 from llama_index.core.base.llms.base import ChatMessage
@@ -31,6 +35,7 @@ from app.models import (
     RerankerModel as DBRerankerModel,
 )
 from app.core.config import settings
+from app.models.recommend_question import RecommendQuestion
 from app.rag.chat_stream_protocol import (
     ChatStreamMessagePayload,
     ChatStreamDataPayload,
@@ -138,10 +143,14 @@ class ChatService:
             self.langfuse_host and self.langfuse_secret_key and self.langfuse_public_key
         )
 
-    def chat(self) -> Generator[ChatEvent, None, None]:
+    def chat(self) -> Generator[ChatEvent | str, None, None]:
         try:
-            for event in self._chat():
-                yield event
+            if self.chat_engine_config.external_engine_config:
+                for event in self._external_chat():
+                    yield event
+            else:
+                for event in self._chat():
+                    yield event
         except Exception as e:
             logger.exception(e)
             yield ChatEvent(
@@ -149,7 +158,7 @@ class ChatService:
                 payload="Encountered an error while processing the chat. Please try again later.",
             )
 
-    def _chat(self) -> Generator[ChatEvent, None, None]:
+    def _chat(self) -> Generator[ChatEvent | str, None, None]:
         if self.enable_langfuse:
             langfuse = Langfuse(
                 host=self.langfuse_host,
@@ -260,6 +269,7 @@ class ChatService:
                     self.user_question,
                     self.chat_history,
                 )
+                print("\n\nthis is working\n\n")
                 yield ChatEvent(
                     event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
                     payload=ChatStreamMessagePayload(
@@ -367,6 +377,7 @@ class ChatService:
         callback_manager = _get_llamaindex_callback_manager()
         text_qa_template = get_prompt_by_jinja2_template(
             self.chat_engine_config.llm.text_qa_prompt,
+            current_date=datetime.now().strftime("%Y-%m-%d"),
             graph_knowledges=graph_knowledges_context,
             original_question=self.user_question,
         )
@@ -461,6 +472,80 @@ class ChatService:
                 assistant_message=db_assistant_message,
             ),
         )
+
+    def _external_chat(self) -> Generator[ChatEvent | str, None, None]:
+        # TODO: integration with langfuse.
+        db_user_message = chat_repo.create_message(
+            session=self.db_session,
+            chat=self.db_chat_obj,
+            chat_message=DBChatMessage(
+                role=MessageRole.USER.value,
+                trace_url="",
+                content=self.user_question,
+            ),
+        )
+        db_assistant_message = chat_repo.create_message(
+            session=self.db_session,
+            chat=self.db_chat_obj,
+            chat_message=DBChatMessage(
+                role=MessageRole.ASSISTANT.value,
+                trace_url="",
+                content="",
+            ),
+        )
+
+        # Frontend requires the empty event to start the chat
+        yield ChatEvent(
+            event_type=ChatEventType.TEXT_PART,
+            payload="",
+        )
+        yield ChatEvent(
+            event_type=ChatEventType.DATA_PART,
+            payload=ChatStreamDataPayload(
+                chat=self.db_chat_obj,
+                user_message=db_user_message,
+                assistant_message=db_assistant_message,
+            ),
+        )
+
+        stream_chat_api_url = self.chat_engine_config.external_engine_config.stream_chat_api_url
+        logger.debug(f"Chatting with external chat engine (api_url: {stream_chat_api_url}) to answer for user question: {self.user_question}")
+        chat_params = {
+            "goal": self.user_question
+        }
+        res = requests.post(stream_chat_api_url, json=chat_params, stream=True)
+
+        # Notice: External type chat engine doesn't support non-streaming mode for now.
+        response_text = ""
+        for line in res.iter_lines():
+            if not line:
+                continue
+
+            # Append to final response text.
+            chunk = line.decode('utf-8')
+            if chunk.startswith("0:"):
+                response_text += json.loads(chunk[2:])
+
+            yield line + b'\n'
+
+        db_assistant_message.content = response_text
+        db_assistant_message.updated_at = datetime.now(UTC)
+        db_assistant_message.finished_at = datetime.now(UTC)
+        self.db_session.add(db_assistant_message)
+        db_user_message.updated_at = datetime.now(UTC)
+        db_user_message.finished_at = datetime.now(UTC)
+        self.db_session.add(db_user_message)
+        self.db_session.commit()
+
+        yield ChatEvent(
+            event_type=ChatEventType.DATA_PART,
+            payload=ChatStreamDataPayload(
+                chat=self.db_chat_obj,
+                user_message=db_user_message,
+                assistant_message=db_assistant_message,
+            ),
+        )
+
 
     def _parse_chat_messages(
         self, chat_messages: List[ChatMessage]
@@ -713,3 +798,43 @@ def check_rag_optional_config(session: Session) -> tuple[bool]:
     )
     default_reranker = session.scalar(select(func.count(DBRerankerModel.id))) > 0
     return langfuse, default_reranker
+
+
+class LLMRecommendQuestions(BaseModel):
+    """recommend questions respond model"""
+    questions: List[str]
+
+
+def get_chat_message_recommend_questions(
+        db_session: Session,
+        chat_message: DBChatMessage,
+        engine_name: str = "default",
+) -> List[str]:
+    chat_engine_config = ChatEngineConfig.load_from_db(db_session, engine_name)
+    _fast_llm = chat_engine_config.get_fast_llama_llm(db_session)
+
+    statement = (
+        select(RecommendQuestion.questions)
+        .where(RecommendQuestion.chat_message_id == chat_message.id)
+        .with_for_update()  # using write lock in case the same chat message trigger multiple requests
+    )
+
+    questions = db_session.exec(statement).first()
+    if questions is not None:
+        return questions
+
+    recommend_questions = _fast_llm.structured_predict(
+        output_cls=LLMRecommendQuestions,
+        prompt=get_prompt_by_jinja2_template(
+            chat_engine_config.llm.further_questions_prompt,
+            chat_message_content=chat_message.content,
+        ),
+    )
+
+    db_session.add(RecommendQuestion(
+        chat_message_id=chat_message.id,
+        questions=recommend_questions.questions,
+    ))
+    db_session.commit()
+
+    return recommend_questions.questions
