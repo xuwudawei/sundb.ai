@@ -36,7 +36,7 @@ from app.rag.default_prompt import (
     DEFAULT_NORMAL_GRAPH_KNOWLEDGE,
     DEFAULT_CONDENSE_QUESTION_PROMPT,
     DEFAULT_TEXT_QA_PROMPT,
-    DEFAULT_REFINE_PROMPT,
+    DEFAULT_REFINE_PROMPT, DEFAULT_FURTHER_QUESTIONS_PROMPT,
 )
 from app.models import (
     ChatEngine as DBChatEngine,
@@ -57,6 +57,7 @@ class LLMOption(BaseModel):
     condense_question_prompt: str = DEFAULT_CONDENSE_QUESTION_PROMPT
     text_qa_prompt: str = DEFAULT_TEXT_QA_PROMPT
     refine_prompt: str = DEFAULT_REFINE_PROMPT
+    further_questions_prompt: str = DEFAULT_FURTHER_QUESTIONS_PROMPT
 
 
 class VectorSearchOption(BaseModel):
@@ -72,12 +73,17 @@ class KnowledgeGraphOption(BaseModel):
     relationship_meta_filters: Optional[dict] = None
 
 
+class ExternalChatEngine(BaseModel):
+    stream_chat_api_url: str = None
+
+
 class ChatEngineConfig(BaseModel):
     llm: LLMOption = LLMOption()
     knowledge_graph: KnowledgeGraphOption = KnowledgeGraphOption()
     vector_search: VectorSearchOption = VectorSearchOption()
     post_verification_url: Optional[str] = None
     post_verification_token: Optional[str] = None
+    external_engine_config: Optional[ExternalChatEngine] = None
 
     _db_chat_engine: Optional[DBChatEngine] = None
     _db_llm: Optional[DBLLM] = None
