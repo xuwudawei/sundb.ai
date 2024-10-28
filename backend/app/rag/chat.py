@@ -819,7 +819,7 @@ def get_chat_message_recommend_questions(
         .with_for_update()  # using write lock in case the same chat message trigger multiple requests
     )
 
-    questions = db_session.exec(statement).first()
+    questions = db_session.execute(statement).first()
     if questions is not None:
         return questions
 
@@ -829,6 +829,11 @@ def get_chat_message_recommend_questions(
             chat_engine_config.llm.further_questions_prompt,
             chat_message_content=chat_message.content,
         ),
+        # Ensure no tool-related parameters are set
+        llm_kwargs={
+            'tools': None,
+            'tool_choice': None,
+        }
     )
 
     db_session.add(RecommendQuestion(
