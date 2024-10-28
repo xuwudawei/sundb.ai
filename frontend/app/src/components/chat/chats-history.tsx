@@ -45,9 +45,6 @@ export function ChatsHistory() {
               asChild
               action={async () => {
                 await deleteChat(chat.id).finally(() => mutate(history => history, { revalidate: true }));
-                if (isActive(chat)) {
-                  router.push('/'); // Redirect to the home page or another appropriate page
-                }
               }}
               dialogTitle={`Are you sure to delete ${chat.title}?`}
               dialogDescription="This action cannot be undone."
