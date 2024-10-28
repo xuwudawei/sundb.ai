@@ -1,4 +1,5 @@
 import logging
+import asyncio
 import requests
 import typing
 import uuid
@@ -111,9 +112,11 @@ class Evaluation:
                     query=question,
                     response=output,
                     contexts=contexts,
+                    
                     reference=sample_data.get("expected_output", None),
                 )
                 if isinstance(result, dict):
+                    print(f"\n\nMetrics for {metric}:\n\n")
                     for eval_name, eval_res in result.items():
                         self.langfuse.score(
                             trace_id=trace_id,
@@ -121,6 +124,8 @@ class Evaluation:
                             value=eval_res.score,
                             comment=eval_res.feedback,
                         )
+                        # Print the metric name and score
+                        print(f"\n\n{eval_name}: {eval_res.score}\n\n")
                 else:
                     self.langfuse.score(
                         trace_id=trace_id,
@@ -128,12 +133,14 @@ class Evaluation:
                         value=result.score,
                         comment=result.feedback,
                     )
+                    # Print the metric name and score
+                    print(f"\n\n{metric}: {result.score}\n\n")
 
     def parse_sample(self, item: DatasetItemClient):
         expected_output = item.expected_output.strip()
         messages = []
 
-        print("Item Input:", item.input)  # Debugging statement
+        print(f"\n\nItem Input: {item.input}\n\n")  # Debugging statement
 
         if "history" in item.input:
             messages = [
@@ -164,7 +171,7 @@ class Evaluation:
             logger.warning(f"Messages are empty for item with input: {item.input}")
 
 
-        print("Parsed Messages:", messages)  # Debugging statement
+        print(f"\n\nParsed Messages: {messages}\n\n")  # Debugging statement
 
         sample_data = {
             "messages": messages,
@@ -193,14 +200,15 @@ class Evaluation:
         # Modify the last user message to include the instruction
         if messages and messages[-1]['role'] == 'user':
             messages[-1]['content'] += (
-                "You only provides answers in the exact format requested."
-                "\n\nPlease answer in the following format:\n"
-                "- For single-choice questions, reply with only the letter corresponding to the correct option (e.g., 'A').\n"
-                "- For multiple-choice questions, reply only with all correct option letters together without spaces or punctuation (e.g., 'BC').\n"
-                "Do not include any additional text or explanations in your answer. Only provide the letters of the correct options."
-                "Do not include any additional text beyond what is specified in the response format."
-                "Do not include any additional text outside of this format."
-
+                "\n\nPlease answer them correctly"
+                
+                # "You only provides answers in the exact format requested."
+                # "\n\nPlease answer in the following format:\n"
+                # "- For single-choice questions, reply with only the letter corresponding to the correct option (e.g., 'A').\n"
+                # "- For multiple-choice questions, reply only with all correct option letters together without spaces or punctuation (e.g., 'BC').\n"
+                # "Do not include any additional text or explanations in your answer. Only provide the letters of the correct options."
+                # "Do not include any additional text beyond what is specified in the response format."
+                # "Do not include any additional text outside of this format."
             )
 
         try:
@@ -245,9 +253,9 @@ def fetch_rag_data(langfuse_client: Langfuse, tracing_id: str):
     data = {
         "history": tracing_data.data.input["chat_history"],
         "input": tracing_data.data.input["user_question"],
-        "graph_context": None,
+        "graph_context": [],
         "refined_question": None,
-        "retrieval_context": None,
+        "retrieval_context": [],
         "output": (
             tracing_data.data.output["content"]
             if tracing_data.data.output is not None
@@ -258,6 +266,11 @@ def fetch_rag_data(langfuse_client: Langfuse, tracing_id: str):
     }
 
     for ob in tracing_data.data.observations:
+        if reranking_key == ob.name and ob.output:
+            retrieval_context = []
+            for node in ob.output.get("nodes", []):
+                retrieval_context.append(node["node"]["text"])
+            data["retrieval_context"] = retrieval_context
         if graph_context_key == ob.name:
             graph_context = {query: sg for query, sg in ob.output["graph"].items()}
             for _, sg in graph_context.items():
