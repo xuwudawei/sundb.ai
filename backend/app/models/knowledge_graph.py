@@ -2,7 +2,6 @@ import enum
 from uuid import UUID
 from typing import Optional, Any, List, Dict
 from datetime import datetime
-from app.core.config import settings
 
 
 from sqlmodel import (
@@ -17,7 +16,7 @@ from sqlmodel import (
 # from tidb_vector.sqlalchemy import VectorType
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import Index
-
+from app.core.config import settings
 
 class EntityType(str, enum.Enum):
     original = "original"
