@@ -1,4 +1,5 @@
 import time
+import logging
 from typing import Any, Optional, Sequence, List, Mapping
 from llama_index.core.evaluation.base import EvaluationResult
 from deepeval import evaluate
@@ -11,15 +12,15 @@ from deepeval.metrics import (
     FaithfulnessMetric,
     GEval,
     HallucinationMetric
-
 )
 
+logger = logging.getLogger(__name__)
 max_retries = 3
 retry_delay = 2
 
 
 class E2ERagEvaluator:
-    def __init__(self, model="gpt-4o", threshold=0.7) -> None:
+    def __init__(self, model="gpt-4o-mini", threshold=0.7) -> None:
         self._model = model
         self._threshold = threshold
 
@@ -75,7 +76,7 @@ class E2ERagEvaluator:
                     metrics=[
                         self._correctness_g_eval,
                         self._contextual_precision,
-                        # self._contextual_recall,
+                        self._contextual_recall,
                         self._contextual_relevancy,
                         self._answer_relevancy,
                         self._faithfulness,
@@ -83,32 +84,49 @@ class E2ERagEvaluator:
                     ],
                     print_results=True,
                     show_indicator=False,
+                    run_async=True,
                 )
+                break  # Exit loop if successful
             except ValueError as e:
                 print(f"Caught ValueError: {e}")
                 print(f"Retrying {attempt + 1}/{max_retries}...")
                 time.sleep(retry_delay)
+            except Exception as e:
+                # Handle unexpected exceptions
+                print(f"An unexpected error occurred: {e}")
+                break  # Exit the retry loop to prevent hanging
 
         if not evaluation_results:
             return {}
+        
+        print(f"\n\nEvaluation results: {evaluation_results}\n\n")
+        print(f"\n\nType of evaluation_results: {type(evaluation_results)}\n\n")
 
         metrics_results = {}
-        # Access test_results from evaluation_results
+        # # Access test_results from evaluation_results
+        # if hasattr(evaluation_results, 'test_results'):
+        #     test_results = evaluation_results.test_results
+        # elif isinstance(evaluation_results, list):
+        #     test_results = evaluation_results['test_results']
+        # else:
+        #     print("Unexpected structure of evaluation_results.")
+        #     return {}
         if hasattr(evaluation_results, 'test_results'):
             test_results = evaluation_results.test_results
-        elif isinstance(evaluation_results, dict) and 'test_results' in evaluation_results:
-            test_results = evaluation_results['test_results']
+        elif isinstance(evaluation_results, list):
+            test_results = evaluation_results  # Assign the list directly
         else:
             print("Unexpected structure of evaluation_results.")
             return {}
+
 
         if not test_results:
             print("test_results is None or empty.")
             return {}
 
         for test_result in test_results:
-            for metric_data in test_result.metrics_data:
-                metrics_results[metric_data.name] = EvaluationResult(
+            for metric_data in test_result.metrics_metadata:
+                metrics_results[metric_data.metric] = EvaluationResult(
                     query=query,
                     response=response,
                     contexts=contexts,
