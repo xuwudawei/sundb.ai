@@ -13,7 +13,7 @@ class ChatEngineRepo(BaseRepo):
     model_cls = ChatEngine
 
     def get(self, session: Session, id: int) -> Optional[ChatEngine]:
-        return session.exec(
+        return session.scalars(
             select(ChatEngine).where(ChatEngine.id == id, ChatEngine.deleted_at.is_(None))
         ).first()
 
