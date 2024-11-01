@@ -8,3 +8,5 @@ data
 venv
 
 .aider*
+project_setup.md
+process_and_requirements.md
