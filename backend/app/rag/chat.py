@@ -269,7 +269,6 @@ class ChatService:
                     self.user_question,
                     self.chat_history,
                 )
-                print("\n\nthis is working\n\n")
                 yield ChatEvent(
                     event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
                     payload=ChatStreamMessagePayload(
