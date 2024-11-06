@@ -544,7 +544,7 @@ class ChatService:
                 if chunk.startswith("8:") and task_id is None:
                     states = json.loads(chunk[2:])
                     if len(states) > 0:
-                        # accesss task by http://endpoint/?task_id=$task_id
+                        # accesss task by cd nhttp://endpoint/?task_id=$task_id
                         task_id = states[0].get("task_id")
             except Exception as e:
                 logger.error(f"Failed to get task_id from chunk: {e}")
