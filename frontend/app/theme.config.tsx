@@ -20,7 +20,7 @@ let themeConfig: DocsThemeConfig = {
         <a
           style={{ padding: '0.5rem' }}
           target="_blank"
-          href="https://twitter.com/tidb_developer"
+          href=""
           aria-label="TiDB Developer Twitter"
           rel="nofollow noreferrer"
         >
