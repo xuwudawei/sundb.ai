@@ -255,13 +255,13 @@ def test_reranker_model(
             nodes=[
                 NodeWithScore(
                     node=TextNode(
-                        text="TiDB is a distributed SQL database.",
+                        text="Sundb is a distributed SQL database.",
                     ),
                     score=0.8,
                 ),
                 NodeWithScore(
                     node=TextNode(
-                        text="TiDB is compatible with MySQL protocol.",
+                        text="Sundb is compatible with MySQL protocol.",
                     ),
                     score=0.6,
                 ),
@@ -272,7 +272,7 @@ def test_reranker_model(
                     score=0.4,
                 ),
             ],
-            query_str="What is TiDB?",
+            query_str="What is Sundb?",
         )
         success = True
         error = ""
