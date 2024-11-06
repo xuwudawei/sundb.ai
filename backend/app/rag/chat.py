@@ -217,7 +217,7 @@ class ChatService:
                         event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
                         payload=ChatStreamMessagePayload(
                             state=ChatMessageSate.KG_RETRIEVAL,
-                            display="Identifying Your Question's Core Intents",
+                            display="我正在理解您问题的核心意图",
                         ),
                     )
                 graph_index._callback_manager = get_llamaindex_callback_manager()
@@ -230,7 +230,7 @@ class ChatService:
                         event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
                         payload=ChatStreamMessagePayload(
                             state=ChatMessageSate.TRACE,
-                            display="Searching the Knowledge Graph for Relevant Context",
+                            display="我正在从知识图谱中搜索相关信息",
                             context={"langfuse_url": trace_url},
                         ),
                     )
@@ -259,7 +259,7 @@ class ChatService:
                         event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
                         payload=ChatStreamMessagePayload(
                             state=ChatMessageSate.TRACE,
-                            display="Searching the Knowledge Graph for Relevant Context",
+                            display="我正在从知识图谱中搜索相关信息",
                             context={"langfuse_url": trace_url},
                         ),
                     )
@@ -382,7 +382,7 @@ class ChatService:
                 event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
                 payload=ChatStreamMessagePayload(
                     state=ChatMessageSate.REFINE_QUESTION,
-                    display="Query Rewriting for Enhanced Information Retrieval",
+                    display="我在优化您的查询，以提升信息检索效果",
                 ),
             )
         callback_manager = get_llamaindex_callback_manager()
@@ -438,7 +438,7 @@ class ChatService:
                                 event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
                                 payload=ChatStreamMessagePayload(
                                     state=ChatMessageSate.GENERATE_ANSWER,
-                                    display="Need to Ask a Clarifying Question",
+                                    display="我需要向您提出一个澄清性的问题",
                                 ),
                             )
 
@@ -465,9 +465,9 @@ class ChatService:
                 event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
                 payload=ChatStreamMessagePayload(
                     state=ChatMessageSate.SEARCH_RELATED_DOCUMENTS,
-                    display="Retrieving and Reranking the Best-Matching Data"
+                    display="我正在检索并重新排序最匹配的数据"
                     if self._reranker
-                    else "Retrieving the Most Relevant Data",
+                    else "我正在检索最相关的数据",
                 ),
             )
         callback_manager = get_llamaindex_callback_manager()
@@ -519,7 +519,7 @@ class ChatService:
                 event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
                 payload=ChatStreamMessagePayload(
                     state=ChatMessageSate.GENERATE_ANSWER,
-                    display="Generating a Precise Answer with AI",
+                    display="我正在为您生成精确的答案",
                 ),
             )
 
@@ -1113,9 +1113,14 @@ def get_chat_message_recommend_questions(
         .with_for_update()  # using write lock in case the same chat message trigger multiple requests
     )
 
-    questions = db_session.execute(statement).first()
-    if questions is not None:
+    # questions = db_session.execute(statement).first()
+    # if questions is not None:
+    #     return questions
+    result = db_session.execute(statement).first()
+    if result is not None:
+        questions = result[0]  # Extract the 'questions' field from the result tuple
         return questions
+
 
     recommend_questions = _fast_llm.structured_predict(
         output_cls=LLMRecommendQuestions,
