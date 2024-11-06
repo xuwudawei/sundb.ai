@@ -78,23 +78,23 @@ Instructions:
 
 Example 1:
 
-user: "Does TiDB support foreign keys?"
-Relevant Knowledge: TiDB supports foreign keys starting from version 6.6.0.
+user: "Does Sundb support foreign keys?"
+Relevant Knowledge: Sundb supports foreign keys starting from version 6.6.0.
 
 Response:
 
 - Clarity Needed: True
-- Clarifying Question: "Which version of TiDB are you using?"
+- Clarifying Question: "Which version of Sundb are you using?"
 
 Example 2:
 
-user: "Does TiDB support nested transaction?"
-Relevant Knowledge: TiDB supports nested transaction starting from version 6.2.0.
+user: "Does Sundb support nested transaction?"
+Relevant Knowledge: Sundb supports nested transaction starting from version 6.2.0.
 
 Response:
 
 - Clarity Needed: True
-- Clarifying Question: "Which version of TiDB are you using?"
+- Clarifying Question: "Which version of Sundb are you using?"
 
 Your Turn:
 
