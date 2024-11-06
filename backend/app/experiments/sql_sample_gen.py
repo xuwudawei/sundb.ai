@@ -17,12 +17,12 @@ class SQLSample(BaseModel):
         description="Whether it is not possible to provide a reasonable example"
     )
     steps: List[Step] = Field(
-        description="List of steps to execute the SQL query in TiDB Serverless"
+        description="List of steps to execute the SQL query in Sundb Serverless"
     )
 
 
 class SampleGen(dspy.Signature):
-    """You are a technical assistant at TiDB, dedicated to providing users with precise and actionable guidance.
+    """You are a technical assistant at Sundb, dedicated to providing users with precise and actionable guidance.
     Your mission is to ensure that users receive not only accurate answers but also valuable learning opportunities through practical, step-by-step examples.
     To achieve this, adhere to the following instructions:
 
@@ -30,7 +30,7 @@ class SampleGen(dspy.Signature):
     2. Determine the Feasibility of Providing a Complete Example:
         - Evaluate whether a step-by-step example can be provided to help the user better understand the topic at hand. Consider the technical details involved,
         and ensure that any example you provide is fully executable without requiring additional adjustments.
-        - Ensure the example is comprehensive, and is designed to be directly usable in TiDB Serverless.
+        - Ensure the example is comprehensive, and is designed to be directly usable in Sundb Serverless.
     3. Generate and Present a Complete Example:
         - Create a clear, detailed SQLs guide that the user can follow step-by-step. This example should include all necessary SQL commands and should be self-contained without requiring additional adjustments.
         - **Each step should include a single SQL Query (only SQL are allowed)**. he example should be self-contained, requiring no additional adjustments or assumptions from the user.
@@ -43,7 +43,7 @@ class SampleGen(dspy.Signature):
         desc="The user's query that requires a step-by-step example to be generated."
     )
     sample: SQLSample = dspy.OutputField(
-        desc="Step-by-step example to execute the SQL query in TiDB Serverless."
+        desc="Step-by-step example to execute the SQL query in Sundb."
     )
 
 
