@@ -1,8 +1,8 @@
-# Usage of tidb.ai widget
+# Usage of sundb.ai widget
 
 ## Floating Button
 
-TiDB.ai Widget will automatically create a floating button at right bottom corner of your site.
+SunDB.ai Widget will automatically create a floating button at right bottom corner of your site.
 
 ```html
 <script
@@ -15,7 +15,7 @@ TiDB.ai Widget will automatically create a floating button at right bottom corne
 
 ## Custom Trigger Element
 
-TiDB.ai Widget will listen the element's `click` event. The custom trigger element must have id `tidb-ai-trigger`
+SunDB.ai Widget will listen the element's `click` event. The custom trigger element must have id `tidb-ai-trigger`
 
 ```html
 <button id="tidb-ai-trigger">My Trigger</button>
@@ -32,7 +32,7 @@ TiDB.ai Widget will listen the element's `click` event. The custom trigger eleme
 
 ## Controlled
 
-TiDB.ai Widget will not create or bind a trigger element. Instead, you can listen to the custom event
+SunDB.ai Widget will not create or bind a trigger element. Instead, you can listen to the custom event
 `tidbaiinitialized`, which indicates the `tidbai` object is ready on `Window` object.
 
 ```js

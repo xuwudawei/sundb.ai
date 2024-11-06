@@ -142,14 +142,14 @@ Use markdown footnote syntax (for example: [^1]) to indicate sources you used.
 Each footnote must correspond to a unique source. Do not use the same source for multiple footnotes.
 
 ### Examples of Correct Footnote Usage (no the unique sources and diverse sources):
-[^1]: [SunDB Overview | Docs](https://github.com/xuwudawei/tidb.ai)
-[^2]: [SunDB Architecture | Docs](https://github.com/xuwudawei/tidb.ai)
+[^1]: [SunDB Overview | Docs](https://github.com/xuwudawei/sundb.ai)
+[^2]: [SunDB Architecture | Docs](https://github.com/xuwudawei/sundb.ai)
 
 ### Examples of Incorrect Footnote Usage (Avoid duplicating the same source for multiple footnotes):
-[^1]: [SunDB Introduction | Docs](https://github.com/xuwudawei/tidb.ai)
-[^2]: [SunDB Introduction | Docs](https://github.com/xuwudawei/tidb.ai)
-[^3]: [SunDB Introduction | Docs](https://github.com/xuwudawei/tidb.ai)
-[^4]: [SunDB Introduction | Docs](https://github.com/xuwudawei/tidb.ai)
+[^1]: [SunDB Introduction | Docs](https://github.com/xuwudawei/sundb.ai)
+[^2]: [SunDB Introduction | Docs](https://github.com/xuwudawei/sundb.ai)
+[^3]: [SunDB Introduction | Docs](https://github.com/xuwudawei/sundb.ai)
+[^4]: [SunDB Introduction | Docs](https://github.com/xuwudawei/sundb.ai)
 
 ---------------------
 

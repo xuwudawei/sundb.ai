@@ -17,11 +17,11 @@ class SampleExtract(dspy.Signature):
         This section should contain all the SQL queries that were generated.
 	2. Review the SQL Example:
 	  - Carefully review each SQL query to ensure it is accurate and can be executed directly.
-      - Verify that the SQL syntax is fully supported and executable in TiDB Serverless.
-      - Check for missing details, or syntax that might be unsupported in TiDB.
-	3. Manual Adjustments If Necessary: If necessary, manually adjust the SQL queries to make them fully executable in TiDB Serverless. \
-        This may include adding missing content, replacing placeholder table names, or modifying syntax to match TiDB's supported features
-	4. Generate the Final SQL List: Provide the final, executable SQL Example Section as a list of SQL queries that can be directly used in TiDB Serverless.
+      - Verify that the SQL syntax is fully supported and executable in SunDB Serverless.
+      - Check for missing details, or syntax that might be unsupported in SunDB.
+	3. Manual Adjustments If Necessary: If necessary, manually adjust the SQL queries to make them fully executable in SunDB Serverless. \
+        This may include adding missing content, replacing placeholder table names, or modifying syntax to match SunDB's supported features
+	4. Generate the Final SQL List: Provide the final, executable SQL Example Section as a list of SQL queries that can be directly used in SunDB Serverless.
 
     By following these instructions, you will help the user not only resolve their current query but also deepen their understanding of the topic through practical application.
     """

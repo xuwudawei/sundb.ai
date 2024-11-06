@@ -161,7 +161,7 @@ def runserver(host, port):
 @click.option(
     "--tidb-ai-chat-engine",
     default="default",
-    help=f"TiDB AI chat engine, default=default",
+    help=f"SunDB AI chat engine, default=default",
 )
 def runeval(dataset, llm_provider, run_name, tidb_ai_chat_engine):
     from app.evaluation.evals import Evaluation
