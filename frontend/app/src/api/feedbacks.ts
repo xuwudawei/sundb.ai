@@ -17,6 +17,8 @@ export interface Feedback {
   updated_at: Date;
   user_id: string | null;
   chat_title: string;
+  origin: string | null;
+  chat_origin: string | null;
   chat_message_content: string;
   user_email: string | null;
 }
@@ -31,7 +33,9 @@ const feedbackSchema = z.object({
   updated_at: zodJsonDate(),
   user_id: z.string().nullable(),
   user_email: z.string().nullable(),
+  origin: z.string().nullable(),
   chat_title: z.string(),
+  chat_origin: z.string().nullable(),
   chat_message_content: z.string(),
 }) satisfies ZodType<Feedback, any, any>;
 
