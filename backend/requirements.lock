@@ -585,7 +585,7 @@ python-pptx==1.0.2
 pytz==2024.1
     # via flower
     # via pandas
-pywin32==306 ; platform_system == 'Windows'
+pywin32==308 ; platform_system == 'Windows'
     # via portalocker
 pyyaml==6.0.1
     # via datasets
