@@ -30,7 +30,7 @@ class SampleExtract(dspy.Signature):
         desc="The user's query that requires a step-by-step example to be generated."
     )
     sample: SQLSample = dspy.OutputField(
-        desc="Step-by-step example to execute the SQL query in TiDB Serverless."
+        desc="Step-by-step example to execute the SQL query in Sundb."
     )
 
 
