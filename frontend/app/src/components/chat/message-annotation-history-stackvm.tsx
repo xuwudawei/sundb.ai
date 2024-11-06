@@ -30,9 +30,9 @@ export function StackVMMessageAnnotationHistory ({ message }: { message: StackVM
     } else {
       id = history?.[0]?.state.state.task_id;
     }
-    if (id) {
-      return `https://stackvm.tidb.ai/?task_id=${id}`;
-    }
+    // if (id) {
+    //   return `https://stackvm.tidb.ai/?task_id=${id}`;
+    // }
     return undefined;
   }, [traceUrl, history, current]);
 
@@ -49,7 +49,7 @@ export function StackVMMessageAnnotationHistory ({ message }: { message: StackVM
         return stackVMTaskUrl;
       }
 
-      return `https://stackvm-ui.vercel.app/tasks/${taskId}`
+      // return `https://stackvm-ui.vercel.app/tasks/${taskId}`
     } catch {
       return stackVMTaskUrl;
     }
