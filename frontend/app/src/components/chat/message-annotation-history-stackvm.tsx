@@ -36,6 +36,25 @@ export function StackVMMessageAnnotationHistory ({ message }: { message: StackVM
     return undefined;
   }, [traceUrl, history, current]);
 
+  const stackVmUI = useMemo(() => {
+    if (!stackVMTaskUrl) {
+      return undefined;
+    }
+    try {
+      const url = new URL(stackVMTaskUrl);
+
+      const taskId = url.searchParams.get('task_id');
+
+      if (!taskId) {
+        return stackVMTaskUrl;
+      }
+
+      return `https://stackvm-ui.vercel.app/tasks/${taskId}`
+    } catch {
+      return stackVMTaskUrl;
+    }
+  }, [stackVMTaskUrl]);
+
   useEffect(() => {
     if (finished) {
       const handler = setTimeout(() => {
