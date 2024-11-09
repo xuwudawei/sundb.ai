@@ -47,12 +47,101 @@ def cosine_distance(v1, v2):
 
 
 class MergeEntities(dspy.Signature):
-    """As a knowledge expert assistant specialized in database technologies, evaluate the two provided entities. These entities have been pre-analyzed and have same name but different descriptions and metadata.
-    Please carefully review the detailed descriptions and metadata for both entities to determine if they genuinely represent the same concept or object(entity).
-    If you conclude that the entities are identical, merge the descriptions and metadata fields of the two entities into a single consolidated entity.
-    If the entities are distinct despite their same name that may be due to different contexts or perspectives, do not merge the entities and return none as the merged entity.
+    # """As a knowledge expert assistant specialized in database technologies, evaluate the two provided entities. These entities have been pre-analyzed and have same name but different descriptions and metadata.
+    # Please carefully review the detailed descriptions and metadata for both entities to determine if they genuinely represent the same concept or object(entity).
+    # If you conclude that the entities are identical, merge the descriptions and metadata fields of the two entities into a single consolidated entity.
+    # If the entities are distinct despite their same name that may be due to different contexts or perspectives, do not merge the entities and return none as the merged entity.
 
-    Considerations: Ensure your decision is based on a comprehensive analysis of the content and context provided within the entity descriptions and metadata.
+    # Considerations: Ensure your decision is based on a comprehensive analysis of the content and context provided within the entity descriptions and metadata.
+    # """
+    """**Objective**: As a knowledge expert assistant specialized in **SunDB technologies**, you are tasked with evaluating two provided entities that share the same **name** but have different **descriptions** and **metadata**. Your goal is to determine whether these entities represent the **same** SunDB component, configuration, data structure, operation, or concept, or if they are **distinct** entities that happen to share the same name due to different contexts within SunDB's architecture.
+
+    **Instructions**:
+
+    1. **Thorough Analysis of Entities**:
+       - **Examine Descriptions and Metadata**:
+         - Carefully read the detailed descriptions and metadata of both entities.
+         - Pay special attention to domain-specific attributes relevant to SunDB, such as:
+           - Components (e.g., processes, services)
+           - Configurations and parameters
+           - Data structures (e.g., tablespaces, indexes)
+           - Operations and commands
+           - Events and states
+           - Terminologies specific to SunDB
+
+    2. **Comparison Criteria**:
+       - **Identify Similarities**:
+         - Look for overlapping features, functionalities, or roles within SunDB's architecture.
+         - Note any common technical specifications, configurations, dependencies, or behaviors.
+       - **Identify Differences**:
+         - Highlight any discrepancies in technical details, functionalities, or contexts.
+         - Consider whether differences are due to variations in descriptions or represent fundamentally different entities.
+
+    3. **Determine Equivalence**:
+       - **Entities Represent the Same Concept**:
+         - If the entities share the same core functionalities and roles, even if described differently, consider them the same.
+         - Examples include:
+           - Different aliases or terminologies for the same component.
+           - Variations in descriptions due to different levels of detail.
+       - **Entities Represent Different Concepts**:
+         - If the entities serve different purposes, have different functionalities, or operate in different contexts within SunDB, consider them distinct.
+         - This includes:
+           - Overloaded terms used in different parts of the system.
+           - Similar names used for unrelated components or concepts.
+
+    4. **Merging Entities**:
+       - **If Entities are the Same**:
+         - **Create a Merged Entity** with:
+           - A **combined description** that integrates information from both entities, providing a comprehensive understanding.
+           - **Merged metadata**, ensuring that all relevant covariates and attributes are included without duplication.
+         - **Guidelines for Merging**:
+           - Consolidate overlapping information.
+           - Preserve unique details from both entities.
+           - Ensure clarity and avoid contradictions.
+       - **If Entities are Different**:
+         - **Do Not Merge** the entities.
+         - Return `None` for the `merged_entity` to indicate they should remain separate.
+
+    **Considerations**:
+
+    - **Contextual Understanding**:
+      - Base your evaluation solely on the provided descriptions and metadata.
+      - Do not use external knowledge or make assumptions beyond the given information.
+    - **Precision and Clarity**:
+      - Ensure that the decision to merge or not is clearly justified based on the analysis.
+      - The merged entity (if applicable) should accurately represent the combined information without losing critical details.
+
+    **Output Format**:
+
+    - **If Merged**:
+      - Return a single `Entity` object with:
+        - `name`: The shared name.
+        - `description`: The combined description.
+        - `metadata`: The merged metadata.
+    - **If Not Merged**:
+      - Return `None` for the `merged_entity`.
+
+    **Example**:
+
+    - **Entities to Evaluate**:
+
+      - **Entity 1**:
+        - **Name**: "Gserver"
+        - **Description**: "The primary server process handling client connections in SunDB."
+        - **Metadata**: {"version": "1.0", "dependencies": ["Gmaster"]}
+
+      - **Entity 2**:
+        - **Name**: "Gserver"
+        - **Description**: "A daemon responsible for background data synchronization tasks."
+        - **Metadata**: {"version": "2.0", "dependencies": ["DataSync"]}
+
+    - **Analysis**:
+      - The descriptions indicate different roles: one handles client connections, the other handles data synchronization.
+      - Dependencies and versions differ.
+
+    - **Decision**:
+      - The entities represent different components within SunDB sharing the same name.
+      - **Action**: Do not merge; return `None` for `merged_entity`.
     """
 
     entities: List[Entity] = dspy.InputField(
