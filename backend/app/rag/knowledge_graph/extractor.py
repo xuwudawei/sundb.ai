@@ -1,3 +1,4 @@
+
 import logging
 from copy import deepcopy
 import pandas as pd
@@ -18,38 +19,107 @@ logger = logging.getLogger(__name__)
 
 
 class ExtractGraphTriplet(dspy.Signature):
-    """Carefully analyze the provided text from database documentation and community blogs to thoroughly identify all entities related to database technologies, including both general concepts and specific details.
+    """**Objective**: Extract as many entities and relationships as possible from the provided SunDB documentation text to construct a comprehensive and detailed knowledge graph that captures the full breadth and intricacies of SunDB's architecture, components, configurations, and functionalities.
 
-    Follow these Step-by-Step Analysis:
+        **Instructions**:
 
-    1. Extract Meaningful Entities:
-      - Identify all significant nouns, proper nouns, and technical terminologies that represent database-related concepts, objects, components, features, issues, key steps, execute order, user case, locations, versions, or any substantial entities.
-      - Ensure that you capture entities across different levels of detail, from high-level overviews to specific technical specifications, to create a comprehensive representation of the subject matter.
-      - Choose names for entities that are specific enough to indicate their meaning without additional context, avoiding overly generic terms.
-      - Consolidate similar entities to avoid redundancy, ensuring each represents a distinct concept at appropriate granularity levels.
+        1. **Exhaustive Entity Extraction**:
+        - **Identify All Relevant Entities**:
+            - Scrutinize the text to extract all possible entities, including but not limited to:
+            - **Components**: Hardware components, software modules, processes, threads, services, daemons within SunDB.
+            - **Configurations and Parameters**: System settings, configuration files, parameters, environment variables, default values, and tunable settings.
+            - **Data Structures**: Tablespaces, control files, log files, data files, indexes, buffers, caches, memory pools, schemas, and database objects.
+            - **Operations and Commands**: Administrative commands, SQL statements, operational modes (e.g., ARCHIVELOG mode), utilities, and scripts.
+            - **Events and States**: Error codes, statuses, operational states (e.g., Active, Inactive, Pending), events, and triggers.
+            - **Concepts and Terminologies**: Replication strategies, failover mechanisms, backup methods, sharding techniques, consistency models, and any domain-specific terminologies.
+            - **Users and Roles**: User accounts, roles, permissions, and authentication methods.
+            - **Networks and Connections**: Network interfaces, protocols, ports, connection strings, and communication channels.
+        - **Use Specific and Descriptive Names**:
+            - Ensure each entity has a unique and descriptive name that reflects its role and purpose within SunDB.
+            - Avoid generic terms; prefer specific identifiers (e.g., "Gserver Process" instead of "Process").
 
-    2. Extract Metadata to claim the entities:
-      - Carefully review the provided text, focusing on identifying detailed covariates associated with each entity.
-      - Extract and link the covariates (which is a comprehensive json TREE, the first field is always: "topic") to their respective entities.
-      - Ensure all extracted covariates is clearly connected to the correct entity for accuracy and comprehensive understanding.
-      - Ensure that all extracted covariates are factual and verifiable within the text itself, without relying on external knowledge or assumptions.
-      - Collectively, the covariates should provide a thorough and precise summary of the entity's characteristics as described in the source material.
+        2. **Comprehensive Covariate Extraction for Entities**:
+        - **Populate `attributes` with Detailed Covariates**:
+            - For each entity, extract all relevant covariates and include them in the `attributes` field as a nested JSON object.
+            - **Include**:
+            - **Technical Specifications**: Sizes, capacities, limits, thresholds, versions, and performance metrics.
+            - **Configurations**: Settings, modes, policies, strategies, parameter values, and configurations.
+            - **Dependencies and Interactions**: Other entities that this entity depends on, interacts with, or is associated with.
+            - **Functional Descriptions**: Roles, responsibilities, behaviors, algorithms implemented, and operational logic.
+            - **Default Values and Ranges**: Any default settings, acceptable value ranges, and configurable options.
+            - **Metadata**: Creation dates, authors, last modified times, and other relevant metadata.
+        - **Maintain Structured JSON in `attributes`**:
+            - Start with a `"topic"` field summarizing the entity category or role.
+            - Organize covariates using clear key-value pairs.
+        - **Example**:
+            ```json
+            {
+            "name": "BUFFER_CACHE_SIZE",
+            "type": "Parameter",
+            "attributes": {
+                "topic": "Memory Configuration Parameter",
+                "Default Value": "256MB",
+                "Allowed Range": "128MB - 1024MB",
+                "Description": "Specifies the size of the buffer cache in memory.",
+                "Related Parameters": ["SHARED_POOL_SIZE", "LOG_BUFFER_SIZE"],
+                "Impact": "Affects the amount of data that can be cached in memory, influencing performance."
+            }
+            }
+            ```
 
-    3. Establish Relationships:
-      - Carefully examine the text to identify all relationships between clearly-related entities, ensuring each relationship is correctly captured with accurate details about the interactions.
-      - Analyze the context and interactions between the identified entities to determine how they are interconnected, focusing on actions, associations, dependencies, or similarities.
-      - Clearly define the relationships, ensuring accurate directionality that reflects the logical or functional dependencies among entities. \
-         This means identifying which entity is the source, which is the target, and what the nature of their relationship is (e.g., $source_entity depends on $target_entity for $relationship).
+        3. **Detailed Relationship Extraction**:
+        - **Identify All Possible Relationships Between Entities**:
+            - Capture every possible relationship, including:
+            - **Dependencies**: Which entities rely on others to function (e.g., "Gserver depends on Gmaster").
+            - **Hierarchies**: Parent-child relationships, ownerships, containment (e.g., "Tablespace contains Data Files").
+            - **Interactions**: Communication paths, data flows, synchronization mechanisms (e.g., "Log Writer Process writes to Redo Log Files").
+            - **Associations**: Groupings, categorizations, affiliations (e.g., "User belongs to Role").
+            - **Sequences and Workflows**: Order of operations, execution sequences (e.g., "Backup operation follows Data Consistency Check").
+            - **Equivalencies and Aliases**: Entities that are equivalent or have aliases (e.g., "Gserver is also known as Global Server").
+        - **Use Clear and Descriptive `relationship_desc`**:
+            - Provide detailed descriptions of how entities are related.
+            - Use action verbs and phrases that specify the nature of the relationship (e.g., "controls", "is part of", "communicates with", "authenticates", "reads from", "writes to").
+        - **Ensure Directionality and Context**:
+            - Clearly define the direction of the relationship (source to target).
+            - Include context to clarify the relationship.
+        - **Example**:
+            ```json
+            {
+            "source_entity": "Gserver Process",
+            "target_entity": "Log Buffer",
+            "relationship_desc": "writes transaction logs to"
+            },
+            {
+            "source_entity": "User Account",
+            "target_entity": "Role",
+            "relationship_desc": "is assigned to"
+            }
+            ```
 
-    Some key points to consider:
-      - Please endeavor to extract all meaningful entities and relationships from the text, avoid subsequent additional gleanings.
+        4. **Verification and Accuracy**:
+        - **Ensure All Required Fields Are Populated**:
+            - Each `entity` must have `name`, `type`, and `attributes`.
+            - Each `relationship` must have `source_entity`, `target_entity`, and `relationship_desc`.
+        - **Avoid Redundancies and Inconsistencies**:
+            - Consolidate similar entities to avoid duplication.
+            - Ensure consistent naming conventions throughout.
+        - **Factual Integrity**:
+            - Extract information strictly from the provided text.
+            - Do not include assumptions or external information not present in the text.
 
-    Objective: Produce a detailed and comprehensive knowledge graph that captures the full spectrum of entities mentioned in the text, along with their interrelations, reflecting both broad concepts and intricate details specific to the database domain.
+        5. **Maximize Entity and Relationship Extraction**:
+        - **Aim for Exhaustiveness**:
+            - Extract as many entities and relationships as possible to create a rich and comprehensive knowledge graph.
+        - **Include Implicit Information**:
+            - Identify and extract entities and relationships that are implied but not explicitly stated in the text.
 
-    """
+        **Goal**: Produce a deeply structured, index-ready JSON object representing the SunDB knowledge graph, capturing all possible entities and their interrelationships to build the most comprehensive knowledge graph ever built for SunDB.
+
+        """
+
 
     text = dspy.InputField(
-        desc="a paragraph of text to extract entities and relationships to form a knowledge graph"
+        desc="A paragraph of SunDB documentation text to extract entities and relationships from"
     )
     knowledge: KnowledgeGraph = dspy.OutputField(
         desc="Graph representation of the knowledge extracted from the text."
@@ -57,15 +127,76 @@ class ExtractGraphTriplet(dspy.Signature):
 
 
 class ExtractCovariate(dspy.Signature):
-    """Please carefully review the provided text and entities list which are already identified in the text. Focusing on identifying detailed covariates associated with each entities provided.
-    Extract and link the covariates (which is a comprehensive json TREE, the first field is always: "topic") to their respective entities.
-    Ensure all extracted covariates is clearly connected to the correct entity for accuracy and comprehensive understanding.
-    Ensure that all extracted covariates are factual and verifiable within the text itself, without relying on external knowledge or assumptions.
-    Collectively, the covariates should provide a thorough and precise summary of the entity's characteristics as described in the source material.
+    """**Objective**: From the provided SunDB documentation text and the list of identified entities, extract as many detailed covariates as possible for each entity to create a complete and rich JSON representation of each entity's attributes.
+
+    **Instructions**:
+
+    1. **Exhaustive Covariate Identification**:
+       - **For Each Entity**:
+         - Extract all possible covariates related to:
+           - **Technical Specifications**: Sizes, capacities, default values, allowable ranges, data types.
+           - **Configurations and Settings**: Modes, policies, strategies, parameter values, configuration options.
+           - **Operational Details**: States, statuses, behaviors, processes, lifecycle stages.
+           - **Dependencies and Interactions**: Other entities it interacts with, depends on, or affects.
+           - **Functional Descriptions**: Roles, responsibilities within SunDB, algorithms implemented.
+           - **Security and Permissions**: Access controls, authentication methods, encryption settings.
+           - **Performance Metrics**: Throughput, latency, resource utilization, optimization settings.
+           - **Metadata**: Version numbers, authorship, timestamps, identifiers.
+       - **Multiple Levels of Detail**:
+         - Include both high-level overviews and low-level specifics.
+         - Capture nested attributes and hierarchies where applicable.
+
+    2. **Structured JSON Representation**:
+       - **Use `"topic"` Field**:
+         - Start the `attributes` JSON with a `"topic"` field summarizing the entity or its primary function.
+       - **Organize Covariates Clearly**:
+         - Use clear and consistent key-value pairs for each attribute.
+         - Group related attributes under subtopics or nested objects if necessary.
+       - **Example**:
+         ```json
+         {
+           "topic": "Gserver Process",
+           "Description": "Primary server process handling client connections and query execution.",
+           "Dependencies": ["Gmaster Process", "Log Buffer", "Shared Pool"],
+           "Configuration Parameters": {
+             "Max Connections": 1000,
+             "Listening Port": 1521,
+             "Timeout Settings": "30s"
+           },
+           "Operational States": ["Active", "Idle", "Busy"],
+           "Performance Metrics": {
+             "Current Load": "75%",
+             "Average Response Time": "200ms"
+           }
+         }
+         ```
+
+    3. **Verification and Accuracy**:
+       - **Link Covariates to Correct Entities**:
+         - Ensure that each covariate is accurately associated with its corresponding entity.
+       - **Factual Integrity**:
+         - Only include covariates that are verifiable within the provided text.
+         - Do not include assumptions or information not present in the text.
+
+    4. **Comprehensive Attribute Coverage**:
+       - **Aim for Completeness**:
+         - The collection of covariates should provide a full understanding of the entity's characteristics and functionalities.
+       - **Detail Operational Intricacies**:
+         - Include unique operational details, configurations, and any special behaviors specific to SunDB.
+
+    5. **Enhance Knowledge Graph Richness**:
+       - **Maximize Detail**:
+         - Provide as much detail as possible to enrich the knowledge graph.
+       - **Ensure Consistency and Clarity**:
+         - Use consistent terminology and formatting for easier integration into the knowledge graph.
+
+    **Goal**: Provide a detailed and precise summary of each entity's characteristics as described in the source material, enhancing the richness and depth of the knowledge graph.
+
     """
 
+
     text = dspy.InputField(
-        desc="a paragraph of text to extract covariates to claim the entities."
+        desc="A paragraph of SunDB documentation text to extract covariates from."
     )
 
     entities: List[EntityCovariateInput] = dspy.InputField(
@@ -231,3 +362,4 @@ class SimpleGraphExtractor:
         entities_df = pd.DataFrame(entities_data)
         relationships_df = pd.DataFrame(relationships_data)
         return entities_df, relationships_df
+
