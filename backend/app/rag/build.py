@@ -42,11 +42,13 @@ class BuildService:
             # spliter = MarkdownNodeParser()
             # TODO: FIX MarkdownNodeParser
             spliter = SentenceSplitter(
-                chunk_size=5000,
+                chunk_size=512,
+                chunk_overlap=0,
             )
         else:
             spliter = SentenceSplitter(
-                chunk_size=5000,
+                chunk_size=512,
+                chunk_overlap=0,
             )
 
         _transformations = [spliter]
