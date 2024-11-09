@@ -36,7 +36,7 @@ class ChatEngineRepo(BaseRepo):
             return result.first()
 
     def get_engine_by_name(self, session: Session, name: str) -> Optional[ChatEngine]:
-        return session.exec(
+        return session.execute(
             select(ChatEngine).where(
                 ChatEngine.name == name, ChatEngine.deleted_at.is_(None)
             )
