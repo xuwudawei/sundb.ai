@@ -33,8 +33,9 @@ def get_dspy_lm_by_llama_llm(llama_llm: BaseLLM) -> dspy.LM:
     elif type(llama_llm) is OpenAILike:
         return dspy.OpenAI(
             model=llama_llm.model,
-            max_tokens=llama_llm.max_tokens or 4096,
+            max_tokens=llama_llm.max_tokens or 6096,
             api_key=llama_llm.api_key,
+            temperature=0.0,
             api_base=enforce_trailing_slash(llama_llm.api_base),
             model_type="chat" if llama_llm.is_chat_model else "text",
         )
