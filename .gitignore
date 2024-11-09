@@ -10,3 +10,8 @@ venv
 .aider*
 project_setup.md
 process_and_requirements.md
+
+covariate_extraction.md
+entity_merging.md
+entity_relation_extraction.md
+test.py
