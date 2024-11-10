@@ -44,7 +44,7 @@ class ChatEngineRepo(BaseRepo):
 
     def create(self, session: Session, obj: ChatEngine):
         if obj.is_default:
-            session.exec(
+            session.execute(
                 update(ChatEngine)
                 .where(ChatEngine.id != obj.id)
                 .values(is_default=False)
