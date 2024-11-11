@@ -38,6 +38,39 @@ class ExtractGraphTriplet(dspy.Signature):
             - Ensure each entity has a unique and descriptive name that reflects its role and purpose within SunDB.
             - Avoid generic terms; prefer specific identifiers (e.g., "Gserver Process" instead of "Process").
 
+        - **正例子 (Positive Example)**:
+            ```json
+            {
+                "name": "BUFFER_CACHE_SIZE",
+                "type": "Parameter",
+                "attributes": {
+                    "topic": "Memory Configuration Parameter",
+                    "Default Value": "256MB",
+                    "Allowed Range": "128MB - 1024MB",
+                    "Description": "Specifies the size of the buffer cache in memory.",
+                    "Related Parameters": ["SHARED_POOL_SIZE", "LOG_BUFFER_SIZE"],
+                    "Impact": "Affects the amount of data that can be cached in memory, influencing performance."
+                }
+            }
+            ```
+
+        - **反例子 (Negative Example)**:
+            ```json
+            {
+                "name": "Buffer Size",
+                "type": "Parameter",
+                "attributes": {
+                    "topic": "Memory Parameter",
+                    "Default Value": "Unknown",
+                    "Allowed Range": "None",
+                    "Description": "Unknown impact",
+                    "Related Parameters": [],
+                    "Impact": "None"
+                }
+            }
+            ```
+            - **Explanation**: The above is a poor example because the name "Buffer Size" is too generic, and the attributes lack specificity (e.g., "Unknown" values and non-descriptive impact).
+
         2. **Comprehensive Covariate Extraction for Entities**:
         - **Populate `attributes` with Detailed Covariates**:
             - For each entity, extract all relevant covariates and include them in the `attributes` field as a nested JSON object.
@@ -48,75 +81,78 @@ class ExtractGraphTriplet(dspy.Signature):
             - **Functional Descriptions**: Roles, responsibilities, behaviors, algorithms implemented, and operational logic.
             - **Default Values and Ranges**: Any default settings, acceptable value ranges, and configurable options.
             - **Metadata**: Creation dates, authors, last modified times, and other relevant metadata.
-        - **Maintain Structured JSON in `attributes`**:
-            - Start with a `"topic"` field summarizing the entity category or role.
-            - Organize covariates using clear key-value pairs.
-        - **Example**:
+
+        - **正例子 (Positive Example)**:
             ```json
             {
-            "name": "BUFFER_CACHE_SIZE",
-            "type": "Parameter",
-            "attributes": {
-                "topic": "Memory Configuration Parameter",
-                "Default Value": "256MB",
-                "Allowed Range": "128MB - 1024MB",
-                "Description": "Specifies the size of the buffer cache in memory.",
-                "Related Parameters": ["SHARED_POOL_SIZE", "LOG_BUFFER_SIZE"],
-                "Impact": "Affects the amount of data that can be cached in memory, influencing performance."
-            }
+                "topic": "Gserver Process",
+                "Description": "Primary server process handling client connections and query execution.",
+                "Dependencies": ["Gmaster Process", "Log Buffer", "Shared Pool"],
+                "Configuration Parameters": {
+                    "Max Connections": 1000,
+                    "Listening Port": 1521,
+                    "Timeout Settings": "30s"
+                },
+                "Operational States": ["Active", "Idle", "Busy"],
+                "Performance Metrics": {
+                    "Current Load": "75%",
+                    "Average Response Time": "200ms"
+                }
             }
             ```
+
+        - **反例子 (Negative Example)**:
+            ```json
+            {
+                "topic": "Process",
+                "Description": "Handles requests",
+                "Dependencies": [],
+                "Configuration Parameters": {},
+                "Operational States": ["Idle"],
+                "Performance Metrics": {}
+            }
+            ```
+            - **Explanation**: This example lacks sufficient details, such as dependencies, specific configurations, and performance metrics, making it incomplete.
 
         3. **Detailed Relationship Extraction**:
         - **Identify All Possible Relationships Between Entities**:
             - Capture every possible relationship, including:
-            - **Dependencies**: Which entities rely on others to function (e.g., "Gserver depends on Gmaster").
-            - **Hierarchies**: Parent-child relationships, ownerships, containment (e.g., "Tablespace contains Data Files").
-            - **Interactions**: Communication paths, data flows, synchronization mechanisms (e.g., "Log Writer Process writes to Redo Log Files").
-            - **Associations**: Groupings, categorizations, affiliations (e.g., "User belongs to Role").
-            - **Sequences and Workflows**: Order of operations, execution sequences (e.g., "Backup operation follows Data Consistency Check").
-            - **Equivalencies and Aliases**: Entities that are equivalent or have aliases (e.g., "Gserver is also known as Global Server").
+            - **Dependencies**: Which entities rely on others to function.
+            - **Hierarchies**: Parent-child relationships, ownerships, containment.
+            - **Interactions**: Communication paths, data flows, synchronization mechanisms.
+            - **Associations**: Groupings, categorizations, affiliations.
+            - **Sequences and Workflows**: Order of operations, execution sequences.
+            - **Equivalencies and Aliases**: Entities that are equivalent or have aliases.
         - **Use Clear and Descriptive `relationship_desc`**:
             - Provide detailed descriptions of how entities are related.
-            - Use action verbs and phrases that specify the nature of the relationship (e.g., "controls", "is part of", "communicates with", "authenticates", "reads from", "writes to").
-        - **Ensure Directionality and Context**:
-            - Clearly define the direction of the relationship (source to target).
-            - Include context to clarify the relationship.
-        - **Example**:
+            - Use action verbs and phrases that specify the nature of the relationship.
+
+        - **正例子 (Positive Example)**:
             ```json
             {
-            "source_entity": "Gserver Process",
-            "target_entity": "Log Buffer",
-            "relationship_desc": "writes transaction logs to"
-            },
-            {
-            "source_entity": "User Account",
-            "target_entity": "Role",
-            "relationship_desc": "is assigned to"
+                "source_entity": "Gserver Process",
+                "target_entity": "Log Buffer",
+                "relationship_desc": "writes transaction logs to"
             }
             ```
 
+        - **反例子 (Negative Example)**:
+            ```json
+            {
+                "source_entity": "Process",
+                "target_entity": "Memory",
+                "relationship_desc": "works with"
+            }
+            ```
+            - **Explanation**: The description "works with" is too vague. Instead, a more specific relationship (e.g., "allocates memory for") would be more accurate.
+
         4. **Verification and Accuracy**:
-        - **Ensure All Required Fields Are Populated**:
-            - Each `entity` must have `name`, `type`, and `attributes`.
-            - Each `relationship` must have `source_entity`, `target_entity`, and `relationship_desc`.
-        - **Avoid Redundancies and Inconsistencies**:
-            - Consolidate similar entities to avoid duplication.
-            - Ensure consistent naming conventions throughout.
-        - **Factual Integrity**:
-            - Extract information strictly from the provided text.
-            - Do not include assumptions or external information not present in the text.
+        - Ensure that all required fields (e.g., `name`, `type`, `attributes`, `source_entity`, `target_entity`, `relationship_desc`) are populated correctly.
+        - Avoid redundancies and inconsistencies by consolidating similar entities.
+        - Ensure factual integrity by extracting only the information present in the provided text, not assumptions or external knowledge.
 
-        5. **Maximize Entity and Relationship Extraction**:
-        - **Aim for Exhaustiveness**:
-            - Extract as many entities and relationships as possible to create a rich and comprehensive knowledge graph.
-        - **Include Implicit Information**:
-            - Identify and extract entities and relationships that are implied but not explicitly stated in the text.
-
-        **Goal**: Produce a deeply structured, index-ready JSON object representing the SunDB knowledge graph, capturing all possible entities and their interrelationships to build the most comprehensive knowledge graph ever built for SunDB.
-
-        """
-
+    **Goal**: Produce a deeply structured, index-ready JSON object representing the SunDB knowledge graph, capturing all possible entities and their interrelationships to build the most comprehensive knowledge graph ever built for SunDB.
+    """
 
     text = dspy.InputField(
         desc="A paragraph of SunDB documentation text to extract entities and relationships from"
@@ -152,7 +188,7 @@ class ExtractCovariate(dspy.Signature):
        - **Organize Covariates Clearly**:
          - Use clear and consistent key-value pairs for each attribute.
          - Group related attributes under subtopics or nested objects if necessary.
-       - **Example**:
+       - **正例子 (Positive Example)**:
          ```json
          {
            "topic": "Gserver Process",
@@ -170,6 +206,19 @@ class ExtractCovariate(dspy.Signature):
            }
          }
          ```
+
+       - **反例子 (Negative Example)**:
+         ```json
+         {
+           "topic": "Process",
+           "Description": "Handles requests",
+           "Dependencies": [],
+           "Configuration Parameters": {},
+           "Operational States": ["Idle"],
+           "Performance Metrics": {}
+         }
+         ```
+         - **Explanation**: This example is incomplete. It lacks sufficient detail, such as specific dependencies, configurations, and performance metrics. It uses a very vague "Process" description, which doesn't describe its role properly in the context of SunDB.
 
     3. **Verification and Accuracy**:
        - **Link Covariates to Correct Entities**:
@@ -191,6 +240,49 @@ class ExtractCovariate(dspy.Signature):
          - Use consistent terminology and formatting for easier integration into the knowledge graph.
 
     **Goal**: Provide a detailed and precise summary of each entity's characteristics as described in the source material, enhancing the richness and depth of the knowledge graph.
+
+    **Instructions Continued**:
+
+    - **Additional Positive Example (正例子)**:
+      This is an expanded example that demonstrates a more complex entity with various covariates across multiple categories:
+      ```json
+      {
+        "topic": "Data File",
+        "Description": "Represents a physical file that stores user data in SunDB.",
+        "Size": "50GB",
+        "File Type": "Binary",
+        "Creation Date": "2024-01-15",
+        "Last Modified": "2024-10-22",
+        "Dependencies": ["Tablespace", "Control File"],
+        "Operational States": ["Active", "Archived"],
+        "Performance Metrics": {
+          "Read Speed": "500MB/s",
+          "Write Speed": "300MB/s"
+        },
+        "Security": {
+          "Encryption": "AES-256",
+          "Access Control": "Role-Based",
+          "Permissions": ["Read", "Write"]
+        }
+      }
+      ```
+
+    - **Additional Negative Example (反例子)**:
+      This is a poor example because it contains too little information and lacks meaningful attributes:
+      ```json
+      {
+        "topic": "File",
+        "Description": "A file.",
+        "Size": "Unknown",
+        "File Type": "Unknown",
+        "Creation Date": "Unknown",
+        "Operational States": ["Inactive"],
+        "Performance Metrics": {}
+      }
+      ```
+      - **Explanation**: This example is missing critical details such as file size, type, creation date, and operational metrics. The attributes are vague, and it doesn't provide enough value for constructing a knowledge graph.
+
+    **Goal**: The goal here is to create a well-structured, detailed, and accurate representation of each entity's attributes. The richer and more complete the covariates, the more effective the knowledge graph will be for representing SunDB's architecture and components.
 
     """
 
@@ -362,4 +454,5 @@ class SimpleGraphExtractor:
         entities_df = pd.DataFrame(entities_data)
         relationships_df = pd.DataFrame(relationships_data)
         return entities_df, relationships_df
+
 
