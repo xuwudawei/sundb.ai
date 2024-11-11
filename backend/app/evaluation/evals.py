@@ -200,7 +200,7 @@ class Evaluation:
         # Modify the last user message to include the instruction
         if messages and messages[-1]['role'] == 'user':
             messages[-1]['content'] += (
-                "\n\nPlease answer them correctly"
+                "\n"
                 
                 # "You only provides answers in the exact format requested."
                 # "\n\nPlease answer in the following format:\n"
