@@ -18,3 +18,8 @@ test.py
 sample_dataset.py
 frontend(touched)
 docs
+.venv
+local-embedding-reranker
+
+*.swp
+*.swo

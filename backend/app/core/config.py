@@ -2,6 +2,7 @@ import enum
 from typing import Annotated, Any
 from dotenv import load_dotenv
 import os
+from urllib.parse import quote
 
 from pydantic import (
     AnyUrl,
