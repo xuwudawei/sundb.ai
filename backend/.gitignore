@@ -127,6 +127,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+local_embedding_reranker/.env
 
 # Spyder project settings
 .spyderproject

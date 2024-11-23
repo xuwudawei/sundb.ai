@@ -62,11 +62,12 @@ services:
     image: sundbai/local-embedding-reranker:v2 ##todo: need to deploy a sundb-ai docker image before this can be used
     ports:
       - 5001:5001
-    # If you are in China, you can uncomment the following environment to speed up the download of models
-    # environment:
-    #   - HF_ENDPOINT=https://hf-mirror.com
-    volumes:
-      - ./local-embedding-reranker:/root/.cache/huggingface
+    environment:
+      - PRE_LOAD_DEFAULT_EMBEDDING_MODEL=true
+    # If you want to pre-load the default reranker model, change the following environment to true
+      - PRE_LOAD_DEFAULT_RERANKER_MODEL=false
+    # volumes:
+    #   - ./local-embedding-reranker:/root/.cache/huggingface
     # If you are using NVIDIA GPU, you can uncomment the following lines to enable GPU support
     # deploy:
     #   resources:
