@@ -1,11 +1,10 @@
-import { PromptViewer } from '@/components/chat-engine/prompt-viewer';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useEffect, useState } from 'react';
 
 import Highlight from 'highlight.js/lib/core';
 import markdown from 'highlight.js/lib/languages/markdown';
+import { useEffect, useState } from 'react';
 import './code-theme.scss';
 
 export interface DocumentPreviewProps {
@@ -29,12 +28,12 @@ export function DocumentViewer ({ content, mime }: DocumentPreviewProps) {
 
 const nf = new Intl.NumberFormat('en-US');
 
-export function DocumentPreviewDialog ({ title, mime, content }: { title: string, mime: string, content: string }) {
+export function DocumentPreviewDialog ({ title, name, mime, content }: { title: string, name: string, mime: string, content: string }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className='text-xs' variant="ghost" size="sm">
-          Show content ({nf.format(content.length)} characters)
+        <Button className="text-xs p-2" variant="ghost" size="sm">
+          {name} ({nf.format(content.length)} characters)
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-[720px] w-full">

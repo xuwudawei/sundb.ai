@@ -41,7 +41,7 @@ export function MessageInput ({
   }, []);
 
   const showShowSelectChatEngine = !!auth.me?.is_superuser && !!onEngineChange;
-  const { data, isLoading } = useSWR(showShowSelectChatEngine && 'api.chat-engines.list', () => listChatEngines());
+  const { data, isLoading } = useSWR(showShowSelectChatEngine && 'api.chat-engines.list-all', () => listChatEngines({ page: 1, size: 100 }));
 
   return (
     <div className={cn('bg-background border p-2 rounded-lg', className)}>
@@ -72,7 +72,7 @@ export function MessageInput ({
                 {item.is_default ? <Badge variant="outline" className="text-green-500 border-green-500/50">default</Badge> : item.name}
                 {item.engine_options.external_engine_config
                   ? <Badge>External Engine (StackVM)</Badge>
-                  : item.engine_options.knowledge_graph.enabled
+                  : item.engine_options.knowledge_graph?.enabled !== false /* TODO: require default config */
                     ? <Badge variant="secondary">Knowledge graph enabled</Badge>
                     : undefined}
               </span>

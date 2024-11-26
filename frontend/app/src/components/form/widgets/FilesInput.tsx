@@ -6,7 +6,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { createColumnHelper } from '@tanstack/table-core';
 import { filesize } from 'filesize';
 import { FileMinus2Icon } from 'lucide-react';
-import { type ChangeEvent, forwardRef, useId } from 'react';
+import { type ChangeEvent, forwardRef, useId, useEffect, useState } from 'react';
 
 export interface FilesInputProps extends FormControlWidgetProps {
   accept: string[];
@@ -20,12 +20,22 @@ export const FilesInput = forwardRef<any, FilesInputProps>(({
   id,
   disabled,
   onBlur,
-  value: files,
+  // value: files = [],
+  value: filesProp = [],
   onChange: onFilesChange,
   ...props
 }, ref) => {
   const hookId = useId();
   id = id ?? hookId;
+
+
+  // Introduce local state for files
+  const [files, setFiles] = useState<File[]>(filesProp);
+
+  // Synchronize local state with prop changes
+  useEffect(() => {
+    setFiles(filesProp);
+  }, [filesProp]);
 
   const columns: ColumnDef<File, any>[] = [
     helper.accessor('name', {}),
@@ -39,9 +49,12 @@ export const FilesInput = forwardRef<any, FilesInputProps>(({
         size="sm"
         className='text-xs'
         onClick={() => {
-          files = [...files];
-          files.splice(cell.row.index, 1);
-          onFilesChange?.(files);
+          const updatedFiles = [...files];
+          updatedFiles.splice(cell.row.index, 1);
+          onFilesChange?.(updatedFiles);
+          // files = [...files];
+          // files.splice(cell.row.index, 1);
+          // onFilesChange?.(files);
         }}
       >
         <FileMinus2Icon className="size-4 mr-1" />
