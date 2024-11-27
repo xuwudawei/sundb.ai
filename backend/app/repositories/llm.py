@@ -26,7 +26,6 @@ class LLMRepo:
         stmt = select(DBLLM).where(DBLLM.is_default == True).order_by(DBLLM.updated_at.desc()).limit(1)
         return session.exec(stmt).first()
 
-
     def must_get_default_llm(self, session: Session) -> Type[DBLLM]:
         db_llm = self.get_default_llm(session)
         if db_llm is None:
