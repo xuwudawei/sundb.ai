@@ -50,6 +50,20 @@ class DefaultEmbeddingModelNotFoundError(HTTPException):
         self.detail = f"default embedding model is not found"
 
 
+class DefaultLLMNotFoundError(HTTPException):
+    status_code = 404
+
+    def __init__(self):
+        self.detail = f"default llm is not found"
+
+
+class DefaultEmbeddingModelNotFoundError(HTTPException):
+    status_code = 404
+
+    def __init__(self):
+        self.detail = f"default embedding model is not found"
+
+
 class KnowledgeBaseNotFoundError(HTTPException):
     status_code = 404
 
