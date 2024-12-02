@@ -5,7 +5,7 @@ import logging
 import dspy
 
 from uuid import UUID
-from typing import List, Generator, Optional, Tuple, Callable
+from typing import List, Generator, Optional, Tuple, Callable, Type
 from datetime import datetime, UTC
 from urllib.parse import urljoin
 
@@ -50,11 +50,10 @@ from app.rag.chat_stream_protocol import (
     ChatEvent,
 )
 from app.models.relationship import get_kb_relationship_model
+from app.rag.knowledge_graph.graph_store import TiDBGraphStore
 from app.rag.vector_store.tidb_vector_store import TiDBVectorStore
-from app.rag.knowledge_graph.graph_store import (
-    TiDBGraphStore,
-    tidb_graph_editor as editor,
-)
+from app.rag.knowledge_graph.graph_store.tidb_graph_editor import legacy_tidb_graph_editor
+
 from app.rag.knowledge_graph import KnowledgeGraphIndex
 from app.rag.chat_config import ChatEngineConfig, get_default_embedding_model, KnowledgeGraphOption
 from app.rag.types import (
@@ -71,9 +70,9 @@ logger = logging.getLogger(__name__)
 
 
 class ChatService:
-    _chunk_db_model: SQLModel = DBChunk
-    _entity_db_model: SQLModel = DBEntity
-    _relationship_db_model: SQLModel = DBRelationship
+    _chunk_db_model: Type[SQLModel] = DBChunk
+    _entity_db_model: Type[SQLModel] = DBEntity
+    _relationship_db_model: Type[SQLModel] = DBRelationship
 
     def __init__(
             self,
@@ -1044,7 +1043,7 @@ def get_chat_message_subgraph(
                 and len(chat_message.graph_data["relationships"]) > 0
         ):
             relationship_ids = chat_message.graph_data["relationships"]
-            all_entities, all_relationships = editor.get_relationship_by_ids(
+            all_entities, all_relationships = legacy_tidb_graph_editor.get_relationship_by_ids(
                 session, relationship_ids
             )
             entities = [

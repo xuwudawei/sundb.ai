@@ -840,7 +840,7 @@ class TiDBGraphStore(KnowledgeGraphStore):
         with_degree: bool = False,
         relationship_meta_filters: Dict = {},
         session: Optional[Session] = None,
-    ) -> List[DBRelationship]:
+    ) -> List[SQLModel]:
         # select the relationships to rank
         subquery = (
             select(
