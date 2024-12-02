@@ -23,3 +23,6 @@ local-embedding-reranker
 
 *.swp
 *.swo
+
+dump.rdb
+.DS_Store
