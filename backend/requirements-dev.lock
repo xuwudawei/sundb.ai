@@ -540,6 +540,7 @@ pydantic==2.8.2
     # via llama-index-core
     # via openai
     # via pydantic-settings
+    # via ragas
     # via sqlmodel
 pydantic-core==2.20.1
     # via pydantic
@@ -667,7 +668,7 @@ tenacity==8.4.2
     # via langchain-core
     # via llama-index-core
     # via llama-index-legacy
-tidb-vector==0.0.10
+tidb-vector==0.0.14
 tiktoken==0.7.0
     # via langchain-openai
     # via llama-index-core

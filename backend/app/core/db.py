@@ -1,5 +1,6 @@
 import ssl
 import contextlib
+import logging
 from typing import AsyncGenerator, Generator
 
 from sqlmodel import create_engine, Session, text
@@ -10,8 +11,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from pgvector.psycopg2 import register_vector  # Import pgvector registration
 
 
-from app.core.config import settings
+from app.core.config import settings, Environment
 
+if settings.ENVIRONMENT == Environment.LOCAL:
+    logging.basicConfig()
+    logger = logging.getLogger('sqlalchemy.engine')
+    logger.setLevel(logging.DEBUG)
 
 # Serverless clusters have a limitation: if there are no active connections for 5 minutes,
 # they will shut down, which closes all connections, so we need to recycle the connections

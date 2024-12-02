@@ -167,3 +167,7 @@ cython_debug/
 
 
 .deepeval-cache.json
+# VSCode
+.vscode/
+
+.ruff_cache

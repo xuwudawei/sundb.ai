@@ -14,7 +14,7 @@ from app.tasks import (
     build_vector_index_from_document,
 )
 from app.repositories import data_source_repo
-from app.schemas import VectorIndexError, KGIndexError
+from app.api.admin_routes.knowledge_base.models import VectorIndexError, KGIndexError
 
 import logging
 logger = logging.getLogger(__name__)
@@ -115,7 +115,7 @@ def delete_datasource(
     purge_datasource_related_resources.apply_async(args=[data_source_id], countdown=5)
 
 
-@router.get("/admin/datasources/{data_source_id}/overview")
+@router.get("/admin/datasources/{data_source_id}/overview", deprecated=True)
 def get_datasource_overview(
     session: SessionDep,
     user: CurrentSuperuserDep,
@@ -130,7 +130,7 @@ def get_datasource_overview(
     return data_source_repo.overview(session, data_source)
 
 
-@router.get("/admin/datasources/{data_source_id}/vector-index-errors")
+@router.get("/admin/datasources/{data_source_id}/vector-index-errors", deprecated=True)
 def get_datasource_vector_index_errors(
     session: SessionDep,
     user: CurrentSuperuserDep,
@@ -143,7 +143,7 @@ def get_datasource_vector_index_errors(
     return data_source_repo.vector_index_built_errors(session, data_source, params)
 
 
-@router.get("/admin/datasources/{data_source_id}/kg-index-errors")
+@router.get("/admin/datasources/{data_source_id}/kg-index-errors", deprecated=True)
 def get_datasource_kg_index_errors(
     session: SessionDep,
     user: CurrentSuperuserDep,
@@ -156,7 +156,7 @@ def get_datasource_kg_index_errors(
     return data_source_repo.kg_index_built_errors(session, data_source, params)
 
 
-@router.post("/admin/datasources/{data_source_id}/retry-failed-tasks")
+@router.post("/admin/datasources/{data_source_id}/retry-failed-tasks", deprecated=True)
 def retry_failed_tasks(
     session: SessionDep,
     user: CurrentSuperuserDep,

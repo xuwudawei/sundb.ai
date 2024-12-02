@@ -11,6 +11,8 @@ import sqlalchemy as sa
 import sqlmodel.sql.sqltypes
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import mysql
+from app.core.config import settings
+
 
 # revision identifiers, used by Alembic.
 revision = "2fc10c21bf88"
