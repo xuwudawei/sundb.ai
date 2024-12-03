@@ -39,7 +39,7 @@ class DataSourceCreate(BaseModel):
         return v
 
 
-@router.post("/admin/datasources")
+@router.post("/admin/datasources", deprecated=True)
 def create_datasource(
     session: SessionDep, user: CurrentSuperuserDep, request: DataSourceCreate
 ) -> DataSource:
@@ -57,7 +57,7 @@ def create_datasource(
     return data_source
 
 
-@router.get("/admin/datasources")
+@router.get("/admin/datasources", deprecated=True)
 def list_datasources(
     session: SessionDep,
     user: CurrentSuperuserDep,
@@ -66,11 +66,11 @@ def list_datasources(
     return data_source_repo.paginate(session, params)
 
 
-@router.get("/admin/datasources/{data_source_id}")
+@router.get("/admin/datasources/{data_source_id}", deprecated=True)
 def get_datasource(
-    session: SessionDep,
-    user: CurrentSuperuserDep,
-    data_source_id: int,
+        session: SessionDep,
+        user: CurrentSuperuserDep,
+        data_source_id: int,
 ) -> DataSource:
     data_source = data_source_repo.get(session, data_source_id)
     if data_source is None:
@@ -80,23 +80,7 @@ def get_datasource(
         )
     return data_source
 
-
-# @router.delete("/admin/datasources/{data_source_id}")
-# def delete_datasource(
-#     session: SessionDep,
-#     user: CurrentSuperuserDep,
-#     data_source_id: int,
-# ):
-#     data_source = data_source_repo.get(session, data_source_id)
-#     if data_source is None:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Data source not found",
-#         )
-#     data_source_repo.delete(session, data_source)
-#     purge_datasource_related_resources.apply_async(args=[data_source_id], countdown=5)
-
-@router.delete("/admin/datasources/{data_source_id}")
+@router.delete("/admin/datasources/{data_source_id}", deprecated=True)
 def delete_datasource(
     session: SessionDep,
     user: CurrentSuperuserDep,
@@ -165,10 +149,10 @@ def retry_failed_tasks(
     data_source = data_source_repo.get(session, data_source_id)
     if data_source is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    for docuemnt_id in data_source_repo.set_failed_vector_index_tasks_to_pending(
+    for document_id in data_source_repo.set_failed_vector_index_tasks_to_pending(
         session, data_source
     ):
-        build_vector_index_from_document.delay(data_source_id, docuemnt_id)
+        build_vector_index_from_document.delay(data_source_id, document_id)
     for chunk_id, document_id in data_source_repo.set_failed_kg_index_tasks_to_pending(
         session, data_source
     ):
