@@ -39,7 +39,8 @@ def upload_files(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"File type {file_ext} not supported. Supported types: {SUPPORTED_FILE_TYPES.keys()}",
             )
-        file_path = f"uploads/{user.id.hex}/{int(time.time())}-{uuid7().hex}{file_ext}"
+        local_file_storage_path=os.getenv("LOCAL_FILE_STORAGE_PATH") or ""
+        file_path = f"{local_file_storage_path}uploads/{user.id.hex}/{int(time.time())}-{uuid7().hex}{file_ext}"
         default_file_storage.save(file_path, file.file)
         uploads.append(
             Upload(

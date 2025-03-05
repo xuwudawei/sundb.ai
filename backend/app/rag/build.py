@@ -29,8 +29,7 @@ class BuildService:
         self,
         llm: LLM,
         dspy_lm: dspy.LM,
-    ):
-        self._llm = llm
+    ):        
         self._dspy_lm = dspy_lm
 
     def build_vector_index_from_document(
@@ -39,8 +38,7 @@ class BuildService:
         embed_mode = get_default_embedding_model(session)
 
         if db_document.mime_type.lower() == "text/markdown":
-            # spliter = MarkdownNodeParser()
-            # TODO: FIX MarkdownNodeParser
+            # # TODO: FIX MarkdownNodeParser
             spliter = SentenceSplitter(
                 chunk_size=512,
                 chunk_overlap=0,
@@ -67,9 +65,9 @@ class BuildService:
             transformations=_transformations,
         )
         document = db_document.to_llama_document()
-        logger.info(f"Start building index for document {document.doc_id}")
+        logger.debug(f"Start building index for document {document.doc_id}")
         vector_index.insert(document, source_uri=db_document.source_uri)
-        logger.info(f"Finish building vecter index for document {document.doc_id}")
+        logger.debug(f"Finish building vecter index for document {document.doc_id}")
         vector_store.close_session()
         return
 
@@ -87,8 +85,8 @@ class BuildService:
             dspy_lm=self._dspy_lm, kg_store=graph_store
         )
         node = db_chunk.to_llama_text_node()
-        logger.info(f"Start building graph index for chunk {db_chunk.id}")
+        logger.debug(f"Start building graph index for chunk {db_chunk.id}")
         graph_index.insert_nodes([node])
-        logger.info(f"Finish building graph index for chunk {db_chunk.id}")
+        logger.debug(f"Finish building graph index for chunk {db_chunk.id}")
         graph_store.close_session()
         return

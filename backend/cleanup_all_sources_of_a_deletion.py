@@ -1,6 +1,6 @@
 from sqlmodel import Session, select, delete
 from app.core.db import engine
-from app.models import Entity, Relationship, Document, Chunk
+from app.models import Entity, Relationship, Document, Chunk, Image
 
 def purge_all_related_resources(data_source_id: int):
     with Session(engine) as session:
@@ -68,8 +68,14 @@ def purge_all_related_resources(data_source_id: int):
         session.exec(stmt)
         session.commit()  # Commit after deleting documents
         print(f"Deleted documents for data source {data_source_id}.")
+        
+        
+        stmt = delete(Image).where(Image.source_document_id.in_(document_ids))
+        session.exec(stmt)
+        session.commit()  # Commit after deleting images.
+        print(f"Deleted images for documents tied to data source {data_source_id}.")
 
         print(f"Purged all resources for data source {data_source_id}.")
 
 # Call this function to clean up everything tied to a data source
-purge_all_related_resources(data_source_id=1)
+purge_all_related_resources(data_source_id=28)

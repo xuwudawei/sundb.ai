@@ -1,14 +1,11 @@
 import json
 import time
 import logging
-
 import dspy
-
 from uuid import UUID
 from typing import List, Generator, Optional, Tuple, Type, Callable
 from datetime import datetime, UTC
 from urllib.parse import urljoin
-
 import requests
 import jinja2
 from llama_index.core.base.embeddings.base import BaseEmbedding

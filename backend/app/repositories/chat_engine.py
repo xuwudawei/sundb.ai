@@ -4,10 +4,11 @@ from sqlmodel import select, Session, update
 from fastapi_pagination import Params, Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.orm.attributes import flag_modified
-
+import logging
 from app.models import ChatEngine, ChatEngineUpdate
 from app.repositories.base_repo import BaseRepo
 
+logger = logging.getLogger(__name__)
 
 class ChatEngineRepo(BaseRepo):
     model_cls = ChatEngine
@@ -35,12 +36,24 @@ class ChatEngineRepo(BaseRepo):
             )
             return result.first()
 
+    # def get_engine_by_name(self, session: Session, name: str) -> Optional[ChatEngine]:
+    #     return session.execute(
+    #         select(ChatEngine).where(
+    #             ChatEngine.name == name, ChatEngine.deleted_at.is_(None)
+    #         )
+    #     ).first()
     def get_engine_by_name(self, session: Session, name: str) -> Optional[ChatEngine]:
-        return session.execute(
+        result = session.execute(
             select(ChatEngine).where(
                 ChatEngine.name == name, ChatEngine.deleted_at.is_(None)
             )
-        ).first()
+        ).first()  # .first() should be called on the result object to extract the first row
+        if result:
+            logger.info(f"Found ChatEngine with name: {name}")
+        else:
+            logger.warning(f"No ChatEngine found with name: {name}")
+        return result
+
 
     def create(self, session: Session, obj: ChatEngine):
         if obj.is_default:

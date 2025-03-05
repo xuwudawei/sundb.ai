@@ -8,9 +8,11 @@ Create Date: 2024-07-10 14:43:55.913126
 
 from alembic import op
 import sqlalchemy as sa
+from app.core.config import settings
 import sqlmodel.sql.sqltypes
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import mysql
+
 
 # revision identifiers, used by Alembic.
 revision = "2fc10c21bf88"

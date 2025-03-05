@@ -108,6 +108,9 @@ class ChatEngineConfig(BaseModel):
             db_chat_engine = chat_engine_repo.get_default_engine(session)
         else:
             db_chat_engine = chat_engine_repo.get_engine_by_name(session, engine_name)
+        
+        logger.warning(f"db_chat_engine: {db_chat_engine}")
+
 
         if not db_chat_engine:
             logger.warning(

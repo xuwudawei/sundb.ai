@@ -9,6 +9,7 @@ from app.models import (
     Chunk,
     Relationship,
     Entity,
+    Image,
 )
 import logging
 from app.rag.datasource import get_data_source_loader
@@ -122,7 +123,14 @@ def purge_datasource_related_resources(data_source_id: int):
                 session.commit()  # Commit after deleting orphaned entities
                 print(f"Deleted orphaned entities for data source {data_source_id}.")
 
-            # Step 7: Delete all documents tied to the data source
+            
+            # Step 7: Delete all images tied to these documents.
+            stmt = delete(Image).where(Image.source_document_id.in_(document_ids))
+            session.exec(stmt)
+            session.commit()  # Commit after deleting images.
+            print(f"Deleted images for documents tied to data source {data_source_id}.")
+
+            # Step 8: Delete all documents tied to the data source
             stmt = delete(Document).where(Document.data_source_id == data_source_id)
             session.exec(stmt)
             session.commit()  # Commit after deleting documents
