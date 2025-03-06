@@ -18,5 +18,9 @@
       "jest-runtime@29.7.0": "patches/jest-runtime@29.7.0.patch",
       "@jest/environment@29.7.0": "patches/@jest__environment@29.7.0.patch"
     }
+  },
+  "dependencies": {
+    "marked": "^15.0.7",
+    "marked-react": "^3.0.0"
   }
 }

@@ -8,6 +8,7 @@ from sqlmodel import Session
 
 from app.rag.knowledge_graph.graph_store import TiDBGraphStore
 from app.rag.knowledge_graph import KnowledgeGraphIndex
+from app.rag.knowledge_graph.build_image_kg import build_kg_from_images
 from app.rag.node_parser import MarkdownNodeParser
 from app.rag.vector_store.tidb_vector_store import TiDBVectorStore
 from app.rag.chat_config import get_default_embedding_model
@@ -69,6 +70,17 @@ class BuildService:
         vector_index.insert(document, source_uri=db_document.source_uri)
         logger.debug(f"Finish building vecter index for document {document.doc_id}")
         vector_store.close_session()
+        
+        # Process images associated with the document for knowledge graph integration
+        # if db_document.mime_type.lower() == "application/pdf":
+        logger.info(f"Processing images for document {document.doc_id} to build knowledge graph")
+        try:
+            build_kg_from_images(session, db_document.id, self._dspy_lm, embed_mode)
+            logger.info(f"Successfully built knowledge graph from images for document {document.doc_id}")
+        except Exception as e:
+            logger.error(f"Error building knowledge graph from images for document {document.doc_id}: {str(e)}")
+            logger.exception(e)
+        
         return
 
     def build_kg_index_from_chunk(self, session: Session, db_chunk: DBChunk):

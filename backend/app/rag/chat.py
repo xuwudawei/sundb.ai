@@ -21,6 +21,7 @@ from llama_index.core.callbacks import CallbackManager
 from llama_index.core.response_synthesizers import get_response_synthesizer
 from langfuse import Langfuse
 from langfuse.llama_index import LlamaIndexCallbackHandler
+from app.utils.image import image_base64_url
 
 from app.models import (
     User,
@@ -59,6 +60,7 @@ from app.site_settings import SiteSetting
 from app.exceptions import ChatNotFound
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class ChatService:
@@ -185,11 +187,11 @@ class ChatService:
             annotation_silent: bool, if True, do not send annotation events
 
         Returns:
-            List[dict]: entities
+            List[dict]: entities (including image URLs for image entities)
             List[dict]: relationships
             List[dict]: chunks
             dict: graph_data_source_ids
-            str: graph_knowledges_context
+            str: graph_knowledges_context (includes image URLs when relevant)
         """
 
         entities, relations, chunks = [], [], []
@@ -240,16 +242,69 @@ class ChatService:
 
                 entities = result["graph"]["entities"]
                 relations = result["graph"]["relationships"]
+                
+                logger.info(f"\n\n\n\n\n**************************relations using intent search: {relations}********************\n\n\n\n\n\n")
                 graph_data_source_ids = {
                     "entities": [e["id"] for e in entities],
                     "relationships": [r["id"] for r in relations],
                 }
+                
+                image_urls_set = set()
+                # Extract image URLs from relationships
+                for relationship in relations:
+                    meta = relationship.get('meta', {})
+                    if meta.get('entity_type') == 'image':
+                        image_url = meta.get('path')
+                        if image_url:
+                            try:
+                                # Convert absolute path to base64
+                                # base64_url = image_base64_url(image_url)
+                                # image_urls_set.add(base64_url)
+                                image_urls_set.add(image_url)
+                                logger.info(f"Found image in relationship: {image_url}")
+                            except FileNotFoundError:
+                                logger.warning(f"Image file not found: {image_url}")
+                            except Exception as e:
+                                logger.error(f"Error processing image {image_url}: {e}")
+                
+                # Also check for image entities directly
+                for entity in entities:
+                    if entity.get('entity_type') == 'image':
+                        image_url = entity.get('meta', {}).get('path')
+                        if image_url:
+                            try:
+                                # Convert absolute path to base64
+                                # base64_url = image_base64_url(image_url)
+                                # image_urls_set.add(base64_url)
+                                image_urls_set.add(image_url)
+                                logger.info(f"Found image in entity: {image_url}")
+                            except FileNotFoundError:
+                                logger.warning(f"Image file not found: {image_url}")
+                            except Exception as e:
+                                logger.error(f"Error processing image {image_url}: {e}")
+                image_urls = list(image_urls_set)
+
+                if image_urls:
+                    logger.info(f"Total unique images found: {len(image_urls)}")
 
                 graph_knowledges = get_prompt_by_jinja2_template(
                     self.chat_engine_config.llm.intent_graph_knowledge,
                     sub_queries=result["queries"],
                 )
-                graph_knowledges_context = graph_knowledges.template
+                
+                
+                
+                logger.info(f"\n\n\n\n***graph_knowledges_context: {graph_knowledges_context}***\n\n\n\n")
+                
+                # Add image URLs to the context if present
+                # Append a section for relevant images if any URLs were found.
+                if image_urls:
+                    # All URLs are now base64 data URLs, no need for additional formatting
+                    image_context = "\n\nRelevant images:\n" + "\n".join([f"![Image]({url})" for url in image_urls])
+                    graph_knowledges_context = graph_knowledges.template + image_context
+                else:
+                    graph_knowledges_context = graph_knowledges.template
+                
             else:
                 if not annotation_silent:
                     yield ChatEvent(
@@ -274,12 +329,62 @@ class ChatService:
                     "entities": [e["id"] for e in entities],
                     "relationships": [r["id"] for r in relations],
                 }
+                
+                logger.info(f"********************relations: {relations}***********************")
+                
+                image_urls_set = set()
+                # Extract image URLs from relationships
+                for relationship in relations:
+                    meta = relationship.get('meta', {})
+                    if meta.get('entity_type') == 'image':
+                        image_url = meta.get('path')
+                        if image_url:
+                            try:
+                                # Convert absolute path to base64
+                                # base64_url = image_base64_url(image_url)
+                                # image_urls_set.add(base64_url)
+                                image_urls_set.add(image_url)
+                                logger.info(f"Found image in relationship: {image_url}")
+                            except FileNotFoundError:
+                                logger.warning(f"Image file not found: {image_url}")
+                            except Exception as e:
+                                logger.error(f"Error processing image {image_url}: {e}")
+                
+                # Also check for image entities directly
+                for entity in entities:
+                    if entity.get('entity_type') == 'image':
+                        image_url = entity.get('meta', {}).get('path')
+                        if image_url:
+                            try:
+                                # Convert absolute path to base64
+                                # base64_url = image_base64_url(image_url)
+                                # image_urls_set.add(base64_url)
+                                image_urls_set.add(image_url)
+                                logger.info(f"Found image in entity: {image_url}")
+                            except FileNotFoundError:
+                                logger.warning(f"Image file not found: {image_url}")
+                            except Exception as e:
+                                logger.error(f"Error processing image {image_url}: {e}")
+                image_urls = list(image_urls_set)
+
+                if image_urls:
+                    logger.info(f"Total unique images found: {len(image_urls)}")
+
+                # Generate knowledge context with image information
                 graph_knowledges = get_prompt_by_jinja2_template(
                     self.chat_engine_config.llm.normal_graph_knowledge,
                     entities=entities,
                     relationships=relations,
                 )
-                graph_knowledges_context = graph_knowledges.template
+                
+                # Add image URLs to the context if present
+                # Append a section for relevant images if any URLs were found.
+                if image_urls:
+                    # All URLs are now base64 data URLs, no need for additional formatting
+                    image_context = "\n\nRelevant images:\n" + "\n".join([f"![Image]({url})" for url in image_urls])
+                    graph_knowledges_context = graph_knowledges.template + image_context
+                else:
+                    graph_knowledges_context = graph_knowledges.template
 
         return entities, relations, chunks, graph_data_source_ids, graph_knowledges_context
 
@@ -468,8 +573,15 @@ class ChatService:
                 ),
             )
         callback_manager = get_llamaindex_callback_manager()
+        
+        # Check if there are images in the context
+        has_images = "![Image](" in graph_knowledges_context
+        image_instruction = ""
+        if has_images:
+            image_instruction = "\n\nIMPORTANT: The context contains relevant images. You MUST include these images in your response using the exact markdown format provided. Do not skip or modify any image references."
+        
         text_qa_template = get_prompt_by_jinja2_template(
-            self.chat_engine_config.llm.text_qa_prompt,
+            self.chat_engine_config.llm.text_qa_prompt + image_instruction,
             current_date=datetime.now().strftime("%Y-%m-%d"),
             graph_knowledges=graph_knowledges_context,
             original_question=self.user_question,
@@ -656,6 +768,26 @@ class ChatService:
 
             if not response_text:
                 raise Exception("Got empty response from LLM")
+                
+            # Check if there are images in the context but not in the response
+            if "![Image](" in graph_knowledges_context and "![Image](" not in response_text:
+                # Extract image URLs from the context
+                image_urls = []
+                for line in graph_knowledges_context.split("\n"):
+                    if line.strip().startswith("![Image]("):
+                        image_urls.append(line.strip())
+                
+                if image_urls:
+                    # Append images to the response
+                    image_section = "\n\nRelevant images:\n" + "\n".join(image_urls)
+                    response_text += image_section
+                    
+                    # Stream the appended image section
+                    for word in image_section:
+                        yield ChatEvent(
+                            event_type=ChatEventType.TEXT_PART,
+                            payload=word,
+                        )
 
         yield from self._chat_finish(
             db_assistant_message=db_assistant_message,

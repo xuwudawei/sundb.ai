@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Mapping, Any, List
+from typing import Mapping, Any, List, Optional
 
 
 class Entity(BaseModel):
@@ -19,6 +19,18 @@ class Entity(BaseModel):
         description=(
             "The covariates (which is a comprehensive json TREE, the first field is always: 'topic') to claim the entity. "
         )
+    )
+    entity_type: str = Field(
+        default="original",
+        description="Type of entity: 'original', 'synopsis', or 'image'"
+    )
+    image_url: Optional[str] = Field(
+        default=None,
+        description="URL or path to the image, only applicable for image entities"
+    )
+    visual_content: Optional[str] = Field(
+        default=None,
+        description="Description of visual elements in the image, only applicable for image entities"
     )
 
 

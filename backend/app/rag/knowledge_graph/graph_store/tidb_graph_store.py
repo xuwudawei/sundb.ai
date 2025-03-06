@@ -294,14 +294,26 @@ class TiDBGraphStore(KnowledgeGraphStore):
         self._session.add(relationshipObject)
         if commit:
             self._session.commit()
+    def get_all_entities(self) -> List[DBEntity]:
+        """
+        Retrieve all entities from the database.
+
+        Returns:
+            List[DBEntity]: A list containing all DBEntity objects.
+        """
+        return self._session.query(DBEntity).all()
+
 
     def get_or_create_entity(self, entity: Entity) -> DBEntity:
         # using the cosine distance between the description vectors to determine if the entity already exists
-        entity_type = (
-            EntityType.synopsis
-            if isinstance(entity, SynopsisEntity)
-            else EntityType.original
-        )
+        if entity.entity_type == "image":
+            entity_type = EntityType.image
+        else:
+            entity_type = (
+                EntityType.synopsis
+                if isinstance(entity, SynopsisEntity)
+                else EntityType.original
+            )
         
         entity_description_vec = get_entity_description_embedding(
             entity.name,

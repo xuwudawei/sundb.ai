@@ -13,6 +13,12 @@ Sub-query: {{ sub_query }}
 
     - Name: {{ entity.name }}
     - Description: {{ entity.description }}
+    - Meta: {{ entity.meta | tojson(indent=2) }}
+    {% if entity.get('entity_type') == 'image' %}
+    - Type: Image Entity
+    - Image URL: {{ entity.get('meta', {}).get('path', '') }}
+    - Visual Content: {{ entity.get('meta', {}).get('visual_elements', {}).get('description', '') }}
+    {% endif %}
 
 {% endfor %}
 
@@ -22,6 +28,10 @@ Sub-query: {{ sub_query }}
 
     - Description: {{ relationship.rag_description }}
     - Weight: {{ relationship.weight }}
+    {% if relationship.get('meta', {}).get('entity_type') == 'image' %}
+    - Image URL: {{ relationship.get('meta', {}).get('path', '') }}
+    - Visual Content: {{ relationship.get('meta', {}).get('visual_elements', {}).get('description', '') }}
+    {% endif %}
 
 {% endfor %}
 
@@ -38,6 +48,12 @@ Entities:
 
 - Name: {{ entity.name }}
 - Description: {{ entity.description }}
+- Meta: {{ entity.meta | tojson(indent=2) }}
+{% if entity.meta.get('entity_type') == 'image' %}
+- Type: Image Entity
+- Image URL: {{ entity.get('meta', {}).get('path', '') }}
+- Visual Content: {{ entity.get('meta', {}).get('visual_elements', {}).get('description', '') }}
+{% endif %}
 
 {% endfor %}
 
@@ -51,6 +67,11 @@ Knowledge relationships:
 - Weight: {{ relationship.weight }}
 - Last Modified At: {{ relationship.last_modified_at }}
 - Meta: {{ relationship.meta | tojson(indent=2) }}
+{% if relationship.get('meta', {}).get('entity_type') == 'image' %}
+- Type: Image Entity
+- Image URL: {{ relationship.get('meta', {}).get('path', '') }}
+- Visual Content: {{ relationship.get('meta', {}).get('visual_elements', {}).get('description', '') }}
+{% endif %}
 
 {% endfor %}
 """
@@ -204,14 +225,20 @@ Use markdown footnote syntax (for example: [^1]) to indicate sources you used.
 Each footnote must correspond to a unique source. Do not use the same source for multiple footnotes.
 
 ### Examples of Correct Footnote Usage (no the unique sources and diverse sources):
-[^1]: [SunDB Overview | Docs](https://github.com/xuwudawei/sundb.ai)
-[^2]: [SunDB Architecture | Docs](https://github.com/xuwudawei/sundb.ai)
+[^1]: [SunDB Overview | Docs](url)
+[^2]: [SunDB Architecture | Docs](url)
 
 ### Examples of Incorrect Footnote Usage (Avoid duplicating the same source for multiple footnotes):
-[^1]: [SunDB Introduction | Docs](https://github.com/xuwudawei/sundb.ai)
-[^2]: [SunDB Introduction | Docs](https://github.com/xuwudawei/sundb.ai)
-[^3]: [SunDB Introduction | Docs](https://github.com/xuwudawei/sundb.ai)
-[^4]: [SunDB Introduction | Docs](https://github.com/xuwudawei/sundb.ai)
+[^1]: [SunDB Introduction | Docs](url) return the accurate url given from the context, do not generate your own url.
+[^2]: [SunDB Introduction | Docs](url) return the accurate url given from the context, do not generate your own url.
+[^3]: [SunDB Introduction | Docs](url) return the accurate url given from the context, do not generate your own url.
+[^4]: [SunDB Introduction | Docs](url) return the accurate url given from the context, do not generate your own url.
+
+### Image Handling:
+When relevant images are provided in the knowledge graph context:
+- Output their URL preceded by "Image URL:" (without using markdown syntax for images), For example: Image URL: url, return the accurate url given from the context, do not generate your own url.
+- Describe the visual content and its relevance to the answer, return the accurate url given from the context, do not generate your own url.
+- Include image sources in footnotes, return the accurate url given from the context, do not generate your own url.
 
 ---------------------
 
@@ -224,7 +251,7 @@ If the language hint is not provided, use the language that the original questio
 
 As a sundb database developer support assistant, please do not fabricate any knowledge. If you cannot get knowledge from the context, please just directly state "you do not know", rather than constructing nonexistent and potentially fake information!!!
 
-First, analyze the provided context information without assuming prior knowledge. Identify all relevant aspects of knowledge contained within. Then, from various perspectives and angles, answer questions as thoroughly and comprehensively as possible to better address and resolve the user's issue.
+First, analyze the provided context information without assuming prior knowledge. Identify all relevant aspects of knowledge contained within, including any relevant images and their visual content. Then, from various perspectives and angles, answer questions as thoroughly and comprehensively as possible to better address and resolve the user's issue.
 
 The Original questions is:
 

@@ -52,13 +52,29 @@ dictConfig(
                 "level": "DEBUG",  # Add this to capture more logs from the main module
                 "handlers": ["console"],
             },
+            "urllib3": {
+                "level": "WARNING",
+                "handlers": ["console"],
+                "propagate": False,
+            },
+            "httpx": {
+                "level": "WARNING",
+                "handlers": ["console"],
+                "propagate": False,
+            },
+            "sqlalchemy": {
+                "level": "WARNING",
+                "handlers": ["console"],
+                "propagate": False,
+            },
         },
     }
 )
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
+
 
 
 load_dotenv()
@@ -174,6 +190,8 @@ def runeval(dataset, llm_provider, run_name, tidb_ai_chat_engine):
     )
     eval.run()
 
+# Suppress Pydantic warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 if __name__ == "__main__":
     cli()

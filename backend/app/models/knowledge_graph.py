@@ -21,6 +21,7 @@ from app.core.config import settings
 class EntityType(str, enum.Enum):
     original = "original"
     synopsis = "synopsis"
+    image = "image"
 
     def __str__(self):
         return self.value

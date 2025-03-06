@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     PGDB_PORT: int = int(os.environ.get("PGDB_PORT", "5433"))
     PGDB_USER: str = "myuser"
     PGDB_PASSWORD: str = "mypassword"
-    PGDB_DATABASE: str = "mydb4"
+    PGDB_DATABASE: str = "mydb5"
     PGDB_SSL: bool = False
 
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"

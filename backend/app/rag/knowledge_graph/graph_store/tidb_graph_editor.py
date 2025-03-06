@@ -118,14 +118,14 @@ def get_relationship(session: Session, relationship_id: int) -> Optional[Relatio
 
 
 def get_relationship_by_ids(session: Session, ids: list[int]) -> List[Relationship]:
-    relationships_queryset = session.exec(
+    relationships_queryset = session.scalars(
         select(Relationship)
         .where(Relationship.id.in_(ids))
         .options(
             joinedload(Relationship.source_entity),
             joinedload(Relationship.target_entity),
         )
-    )
+    ).all()
 
     relationships = []
     entities = []
