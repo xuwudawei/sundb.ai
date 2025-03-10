@@ -578,7 +578,7 @@ class ChatService:
         has_images = "![Image](" in graph_knowledges_context
         image_instruction = ""
         if has_images:
-            image_instruction = "\n\nIMPORTANT: The context contains relevant images. You MUST include these images in your response using the exact markdown format provided. Do not skip or modify any image references."
+            image_instruction = "\n\nIMPORTANT: The context contains relevant images. You MUST include these images in your response using the exact link format provided. Do not skip or modify any image references."
         
         text_qa_template = get_prompt_by_jinja2_template(
             self.chat_engine_config.llm.text_qa_prompt + image_instruction,

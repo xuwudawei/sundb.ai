@@ -8,6 +8,11 @@ import io
 from pydantic import BaseModel
 from typing import Generator, IO
 from pypdf import PdfReader
+from pdf2image import convert_from_bytes
+import uuid
+from app.rag.chat_config import get_default_llm
+from sqlmodel import Session
+from app.core.db import engine
 
 from app.rag.image_analysis import LLMImageAnalyzer
 
@@ -16,6 +21,7 @@ from app.models.image import Image
 from app.file_storage import default_file_storage
 from app.types import MimeTypes
 from .base import BaseDataSource
+from app.rag.knowledge_graph.s3_image_storage import S3ImageStorage
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +38,7 @@ class FileDataSource(BaseDataSource):
             FileConfig.model_validate(f_config)
 
     def load_documents(self) -> Generator[Document, None, None]:
+        s3_storage = S3ImageStorage()
         logger.info(f"Starting document loading for data source ID: {self.data_source_id}")
         for f_config in self.config:
             upload_id = f_config["file_id"]
@@ -78,6 +85,25 @@ class FileDataSource(BaseDataSource):
                         
                         # Save images to database
                         if images:
+                            #uploading image to s3 using try block
+                            try:
+                                for image in images:
+                                    # We need to get the PIL image from the local storage path
+                                    try:
+                                        with default_file_storage.open(image.path) as img_file:
+                                            pil_image = PILImage.open(img_file)
+                                            image_data = io.BytesIO()
+                                            pil_image.save(image_data, format='PNG')
+                                            image_data.seek(0)
+                                            image_bytes = image_data.getvalue()
+                                        image_path = s3_storage.upload_image(image_bytes, f"image_{image.source_document_id}")
+                                        image.path = image_path
+                                        logger.debug(f"Uploaded image to S3, path: {image.path}")
+                                    except Exception as img_err:
+                                        logger.error(f"Error processing image for S3 upload: {str(img_err)}")
+                                logger.info(f"Successfully uploaded {len(images)} images for document ID: {document.id}")
+                            except Exception as e:
+                                logger.error(f"Error occurred while uploading images to S3 for document ID: {document.id}: {str(e)}")
                             logger.info(f"Adding {len(images)} images to session for document ID: {document.id}")
                             self.session.add_all(images)
                             self.session.flush()
@@ -160,13 +186,6 @@ def extract_text_and_images_from_pdf(file: IO, document_id: int) -> tuple[str, l
     text_content = []
     images_list = []
     
-    # Import here to avoid circular imports
-    from pdf2image import convert_from_bytes
-    import uuid
-    import os
-    from app.rag.chat_config import get_default_llm
-    from sqlmodel import Session
-    from app.core.db import engine
     
     logger.info(f"Starting PDF extraction for document ID: {document_id}")
     
@@ -201,6 +220,8 @@ def extract_text_and_images_from_pdf(file: IO, document_id: int) -> tuple[str, l
             images = []
         
         combined_image_text = ""
+        
+        
         for img_idx, img in enumerate(images):
             try:
                 # Save the image with a unique filename
@@ -301,6 +322,12 @@ def extract_text_from_xlsx(file: IO) -> str:
 
 def img_to_bytes(img) -> bytes:
     """Convert PIL Image to bytes."""
+    # Check if the image is already a PIL Image object
+    if not isinstance(img, PILImage.Image):
+        # If it's our database Image model, we can't convert it directly
+        # Return an error or handle appropriately
+        raise TypeError(f"Expected PIL Image object, got {type(img).__name__}")
+        
     img_byte_arr = io.BytesIO()
     img.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)

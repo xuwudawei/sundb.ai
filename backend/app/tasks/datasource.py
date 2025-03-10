@@ -61,6 +61,7 @@ def purge_datasource_related_resources(data_source_id: int):
     # delete all the related resources
     #   - documents
     #   - chunks
+    #   - images
     #   - vector index
     #   - kg index
         with Session(engine) as session:
@@ -124,10 +125,30 @@ def purge_datasource_related_resources(data_source_id: int):
                 print(f"Deleted orphaned entities for data source {data_source_id}.")
 
             
-            # Step 7: Delete all images tied to these documents.
+            # Step 7: Delete all images from S3 and database
+            from app.rag.knowledge_graph.s3_image_storage import S3ImageStorage
+            s3_storage = S3ImageStorage()
+            
+            # First get all images to be deleted
+            images = session.exec(
+                select(Image).where(Image.source_document_id.in_(document_ids))
+            ).all()
+            
+            # Delete images from S3
+            for image in images:
+                try:
+                    # Extract image name from path
+                    image_name = f"image_{image.id}"
+                    if s3_storage.delete_image(image_name):
+                        logger.info(f"Successfully deleted image {image_name} from S3")
+                    else:
+                        logger.warning(f"Failed to delete image {image_name} from S3")
+                except Exception as e:
+                    logger.error(f"Error deleting image {image.id} from S3: {str(e)}")
+            # Delete image records from database
             stmt = delete(Image).where(Image.source_document_id.in_(document_ids))
             session.exec(stmt)
-            session.commit()  # Commit after deleting images.
+            session.commit()  # Commit after deleting images
             print(f"Deleted images for documents tied to data source {data_source_id}.")
 
             # Step 8: Delete all documents tied to the data source

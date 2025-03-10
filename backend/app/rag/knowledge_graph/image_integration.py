@@ -4,9 +4,11 @@ from app.models.image import Image
 from app.rag.knowledge_graph.schema import Entity, Relationship, KnowledgeGraph
 from app.models.knowledge_graph import EntityType
 
+
 logger = logging.getLogger(__name__)
 
 def create_image_entities_and_relationships(image: Image) -> KnowledgeGraph:
+
     """
     Creates a simplified image entity with consolidated metadata and relationships.
     
@@ -15,8 +17,7 @@ def create_image_entities_and_relationships(image: Image) -> KnowledgeGraph:
         
     Returns:
         KnowledgeGraph: A knowledge graph containing the image entity and document relationship
-    """
-    # Create a single comprehensive image entity with all information
+    """    # Create a single comprehensive image entity with all information
     image_entity = Entity(
         name=f"Image_{image.id}",
         description=image.description or "Image without description",

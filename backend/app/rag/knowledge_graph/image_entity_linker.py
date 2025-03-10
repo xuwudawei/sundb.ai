@@ -374,10 +374,27 @@ async def link_image_to_entities(
             "text_snippets": image.text_snippets
         }
 
-    image_path = Path(image.path)
-    if not image_path.exists():
-        logger.error(f"Image not found at {image_path}")
-        return []
+    image_path = image.path
+    
+    # Check if the path is a URL (starts with http:// or https://)
+    if image_path.startswith(('http://', 'https://')):
+        # For URLs, we can't use Path.exists(), so we'll just log and proceed
+        # Fix URL format if needed (ensure proper protocol separator)
+        if '://' not in image_path:
+            # Fix malformed URLs like https:/example.com to https://example.com
+            image_path = image_path.replace('https:/', 'https://')
+            image_path = image_path.replace('http:/', 'http://')
+            logger.info(f"Fixed malformed URL: {image_path}")
+        
+        # For S3 or other remote URLs, we'll skip the existence check
+        # and let the downstream code handle any connection issues
+        logger.info(f"Using remote image URL: {image_path}")
+    else:
+        # For local files, check if they exist
+        local_path = Path(image_path)
+        if not local_path.exists():
+            logger.error(f"Image not found at {local_path}")
+            return []
 
     api_key = os.getenv("LLM_API_KEY")
     api_url = os.getenv("LLM_API_URL")
@@ -398,7 +415,7 @@ async def link_image_to_entities(
                 {
                     "type": "image_url",
                     "image_url": {
-                        "url": f"{image_base64_url(str(image_path))}",
+                        "url": image_path if image_path.startswith(('http://', 'https://')) else f"{image_base64_url(str(image_path))}",
                     },
                 },
             ],
