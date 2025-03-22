@@ -2,7 +2,8 @@ import logging
 from copy import deepcopy
 import pandas as pd
 import dspy
-from dspy.functional import TypedPredictor
+from dspy.signatures import Signature
+from dspy.signatures.field import InputField, OutputField
 from typing import Mapping, Optional, List, Dict, Any
 from llama_index.core.schema import BaseNode
 
@@ -209,7 +210,7 @@ Goal: To produce a highly detailed, low-level subgraph that maps the fine-graine
         desc="Graph representation of the domain-specific entities extracted from the text."
     )
 
-class CovariateExtractionAgent(dspy.Signature):
+class CovariateExtractionAgent(Signature):
    
     """
 **Objective**: Extract and link detailed covariates for each identified entity in the provided SunDB documentation. These covariates should offer a comprehensive and precise summary of each entity's characteristics, ensuring factual accuracy and verifiability within the text.
@@ -294,6 +295,8 @@ Final Note: Ensure all covariates extracted align with the SunDB domain and are 
         desc="List of entities with extracted covariates."
     )
 
+
+
 # --- Main Extractor Module ---
 
 class Extractor(dspy.Module):
@@ -305,18 +308,18 @@ class Extractor(dspy.Module):
         super().__init__()
         self.dspy_lm = dspy_lm
 
-        # Initialize TypedPredictors for each agent
-        self.high_level_extractor = TypedPredictor(HighLevelEntityRelationshipExtractionAgent)
-        self.mid_level_extractor = TypedPredictor(MidLevelEntityRelationshipExtractionAgent)
-        self.low_level_extractor = TypedPredictor(LowLevelEntityRelationshipExtractionAgent)
-        self.covariate_extractor = TypedPredictor(CovariateExtractionAgent)
+        # Initialize Predictors for each agent
+        self.high_level_extractor = dspy.Predict(HighLevelEntityRelationshipExtractionAgent)
+        self.mid_level_extractor = dspy.Predict(MidLevelEntityRelationshipExtractionAgent)
+        self.low_level_extractor = dspy.Predict(LowLevelEntityRelationshipExtractionAgent)
+        self.covariate_extractor = dspy.Predict(CovariateExtractionAgent)
 
     def get_llm_output_config(self):
-        if "openai" in self.dspy_lm.provider.lower():
+        if "openai" in str(self.dspy_lm.provider).lower():
             return {
                 "response_format": {"type": "json_object"},
             }
-        elif "ollama" in self.dspy_lm.provider.lower():
+        elif "ollama" in str(self.dspy_lm.provider).lower():
             return {}
         else:
             return {

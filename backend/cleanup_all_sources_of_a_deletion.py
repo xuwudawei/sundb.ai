@@ -72,4 +72,4 @@ def purge_all_related_resources(data_source_id: int):
         print(f"Purged all resources for data source {data_source_id}.")
 
 # Call this function to clean up everything tied to a data source
-purge_all_related_resources(data_source_id=1)
+purge_all_related_resources(data_source_id=163)

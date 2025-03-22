@@ -1,6 +1,6 @@
 import logging
 import dspy
-from dspy.functional import TypedChainOfThought, TypedPredictor
+from dspy.predict import Predict
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from llama_index.core.tools import FunctionTool
@@ -62,7 +62,7 @@ class DecomposeQueryModule(dspy.Module):
     def __init__(self, dspy_lm: dspy.LM):
         super().__init__()
         self.dspy_lm = dspy_lm
-        self.prog = TypedPredictor(DecomposeQuery)
+        self.prog = Predict(DecomposeQuery)
 
     def forward(self, query):
         with dspy.settings.context(lm=self.dspy_lm):

@@ -6,7 +6,7 @@ import logging
 
 import dspy
 import requests
-from dsp.modules.lm import LM
+from dspy.clients.lm import LM
 from llama_index.core.base.llms.base import BaseLLM
 from llama_index.llms.openai import OpenAI
 from llama_index.llms.openai_like import OpenAILike
@@ -25,14 +25,15 @@ def get_dspy_lm_by_llama_llm(llama_llm: BaseLLM) -> dspy.LM:
     """
     if type(llama_llm) is OpenAI:
         return dspy.OpenAI(
-            model=llama_llm.model,
+            # model=llama_llm.model,
+            'openai/'+llama_llm.model,
             max_tokens=llama_llm.max_tokens or 4096,
             api_key=llama_llm.api_key,
             api_base=enforce_trailing_slash(llama_llm.api_base),
         )
     elif type(llama_llm) is OpenAILike:
-        return dspy.OpenAI(
-            model=llama_llm.model,
+        return dspy.LM(
+            'openai/'+llama_llm.model,
             max_tokens=llama_llm.max_tokens or 6096,
             api_key=llama_llm.api_key,
             temperature=0.0,
@@ -75,8 +76,8 @@ def get_dspy_lm_by_llama_llm(llama_llm: BaseLLM) -> dspy.LM:
     elif type(llama_llm) is AnthropicVertex:
         raise ValueError("AnthropicVertex is not supported by dspy.")
     elif type(llama_llm) is Ollama:
-        return DspyOllamaLocal(
-            model=llama_llm.model,
+        return dspy.LM(
+            llama_llm.model,
             base_url=llama_llm.base_url,
             timeout_s=llama_llm.request_timeout,
             temperature=llama_llm.temperature,
@@ -138,19 +139,22 @@ class DspyOllamaLocal(LM):
         presence_penalty: float = 0,
         n: int = 1,
         num_ctx: int = 1024,
+        cache: bool = True,
+        cache_in_memory: bool = True,
+        callbacks = None,
+        num_retries: int = 8,
         **kwargs,
     ):
-        super().__init__(model)
+        super().__init__(model, model_type=model_type, temperature=temperature, max_tokens=max_tokens, 
+                        cache=cache, cache_in_memory=cache_in_memory, callbacks=callbacks, 
+                        num_retries=num_retries, **kwargs)
 
         self.provider = "ollama"
-        self.model_type = model_type
         self.base_url = base_url
         self.model_name = model
         self.timeout_s = timeout_s
 
-        self.kwargs = {
-            "temperature": temperature,
-            "max_tokens": max_tokens,
+        self.kwargs.update({
             "top_p": top_p,
             "top_k": top_k,
             "frequency_penalty": frequency_penalty,
@@ -158,7 +162,7 @@ class DspyOllamaLocal(LM):
             "n": n,
             "num_ctx": num_ctx,
             **kwargs,
-        }
+        })
 
         # Ollama uses num_predict instead of max_tokens
         self.kwargs["num_predict"] = self.kwargs["max_tokens"]
@@ -247,11 +251,15 @@ class DspyOllamaLocal(LM):
 
         return request_info
 
-    def request(self, prompt: str, **kwargs):
+    def forward(self, prompt=None, messages=None, **kwargs):
         """Wrapper for requesting completions from the Ollama model."""
         if "model_type" in kwargs:
             del kwargs["model_type"]
-
+            
+        # Build the request
+        messages = messages or [{"role": "user", "content": prompt}]
+        kwargs = {**self.kwargs, **kwargs}
+        
         return self.basic_request(prompt, **kwargs)
 
     def _get_choice_text(self, choice: dict[str, Any]) -> str:
@@ -259,7 +267,8 @@ class DspyOllamaLocal(LM):
 
     def __call__(
         self,
-        prompt: str,
+        prompt: str = None,
+        messages = None,
         only_completed: bool = True,
         return_sorted: bool = False,
         **kwargs,
@@ -267,7 +276,8 @@ class DspyOllamaLocal(LM):
         """Retrieves completions from Ollama.
 
         Args:
-            prompt (str): prompt to send to Ollama
+            prompt (str, optional): prompt to send to Ollama
+            messages (list, optional): messages to send to Ollama in chat format
             only_completed (bool, optional): return only completed responses and ignores completion due to length. Defaults to True.
             return_sorted (bool, optional): sort the completion choices using the returned probabilities. Defaults to False.
 
@@ -278,7 +288,7 @@ class DspyOllamaLocal(LM):
         assert only_completed, "for now"
         assert return_sorted is False, "for now"
 
-        response = self.request(prompt, **kwargs)
+        response = self.forward(prompt=prompt, messages=messages, **kwargs)
 
         choices = response["choices"]
 

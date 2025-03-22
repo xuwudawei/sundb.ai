@@ -198,7 +198,7 @@ def create_embedding_model(
 
 
 class LangfuseSetting(BaseModel):
-    host: str = "https://us.cloud.langfuse.com"
+    host: str = "http://localhost:3003"
     public_key: str
     secret_key: str
 

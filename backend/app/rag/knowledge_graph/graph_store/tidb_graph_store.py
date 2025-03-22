@@ -1,8 +1,9 @@
 import dspy
 import logging
 import numpy as np
-from dspy.functional import TypedPredictor
+import dspy
 from deepdiff import DeepDiff
+from dspy.predict import Predict
 from typing import List, Optional, Tuple, Dict, Set
 from collections import defaultdict
 
@@ -154,7 +155,7 @@ class MergeEntities(dspy.Signature):
 
 class MergeEntitiesProgram(dspy.Module):
     def __init__(self):
-        self.prog = TypedPredictor(MergeEntities)
+        self.prog = Predict(MergeEntities)
 
     def forward(self, entities: List[Entity]):
         if len(entities) != 2:

@@ -1,6 +1,6 @@
 import logging
 import dspy
-from dspy.functional import TypedChainOfThought, TypedPredictor
+from dspy.predict import ChainOfThought
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
@@ -41,7 +41,7 @@ class DecomposePrerequisitesModule(dspy.Module):
     def __init__(self, dspy_lm: dspy.LM):
         super().__init__()
         self.dspy_lm = dspy_lm
-        self.prog = TypedChainOfThought(DecomposePrerequisites)
+        self.prog = ChainOfThought(DecomposePrerequisites)
 
     def forward(self, query):
         with dspy.settings.context(lm=self.dspy_lm):

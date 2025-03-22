@@ -1,6 +1,7 @@
 import time
 import dspy
 import logging
+from dspy.predict import ChainOfThought
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select, func
@@ -81,7 +82,7 @@ class SemanticSearchProgram(dspy.Module):
     def __init__(self, dspy_lm: dspy.LM):
         super().__init__()
         self.dspy_lm = dspy_lm
-        self.prog = dspy.TypedChainOfThought(QASemanticSearchModule)
+        self.prog = ChainOfThought(QASemanticSearchModule)
 
     def forward(self, query: str, candidats: SemanticGroup):
         with dspy.settings.context(lm=self.dspy_lm):
