@@ -77,7 +77,7 @@ def get_dspy_lm_by_llama_llm(llama_llm: BaseLLM) -> dspy.LM:
         raise ValueError("AnthropicVertex is not supported by dspy.")
     elif type(llama_llm) is Ollama:
         return dspy.LM(
-            llama_llm.model,
+            'ollama/'+llama_llm.model,
             base_url=llama_llm.base_url,
             timeout_s=llama_llm.request_timeout,
             temperature=llama_llm.temperature,
@@ -129,7 +129,7 @@ class DspyOllamaLocal(LM):
         self,
         model: str = "llama2",
         model_type: Literal["chat", "text"] = "text",
-        base_url: str = "http://localhost:11434",
+        base_url: str = "http://10.0.0.107:11434",
         timeout_s: float = 120,
         temperature: float = 0.0,
         max_tokens: int = 150,
