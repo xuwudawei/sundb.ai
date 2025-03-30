@@ -173,6 +173,11 @@ def runeval(dataset, llm_provider, run_name, tidb_ai_chat_engine):
         tidb_ai_chat_engine=tidb_ai_chat_engine,
     )
     eval.run()
+    
+import litellm
+
+litellm.enable_json_schema_validation = True
+litellm.set_verbose = True # see the raw request made by litellm
 
 
 if __name__ == "__main__":

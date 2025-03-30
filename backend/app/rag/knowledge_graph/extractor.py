@@ -7,6 +7,7 @@ from dspy.signatures.field import InputField, OutputField
 from typing import Mapping, Optional, List, Dict, Any
 from llama_index.core.schema import BaseNode
 
+
 from app.rag.knowledge_graph.schema import (
     Entity,
     Relationship,
@@ -315,12 +316,14 @@ class Extractor(dspy.Module):
         self.covariate_extractor = dspy.Predict(CovariateExtractionAgent)
 
     def get_llm_output_config(self):
-        if "openai" in str(self.dspy_lm.provider).lower():
+        if "openai/" in str(self.dspy_lm.provider).lower():
             return {
-                "response_format": {"type": "json_object"},
+                # "response_format": {"type": "json_object"},
             }
-        elif "ollama" in str(self.dspy_lm.provider).lower():
-            return {}
+        elif "ollama/" in str(self.dspy_lm.provider).lower():
+            return {
+                "response_format": { "type": "json_object"}
+            }
         else:
             return {
                 "response_mime_type": "application/json",

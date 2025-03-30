@@ -1,6 +1,7 @@
 import os
 import datetime
 import hashlib
+import json
 from typing import Any, Literal
 import logging
 
@@ -14,6 +15,10 @@ from llama_index.llms.gemini import Gemini
 from llama_index.llms.bedrock import Bedrock
 from llama_index.llms.ollama import Ollama
 from app.rag.llms.anthropic_vertex import AnthropicVertex
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def get_dspy_lm_by_llama_llm(llama_llm: BaseLLM) -> dspy.LM:
@@ -33,7 +38,7 @@ def get_dspy_lm_by_llama_llm(llama_llm: BaseLLM) -> dspy.LM:
         )
     elif type(llama_llm) is OpenAILike:
         return dspy.LM(
-            'openai/'+llama_llm.model,
+            'lm_studio/'+llama_llm.model,
             max_tokens=llama_llm.max_tokens or 6096,
             api_key=llama_llm.api_key,
             temperature=0.0,
@@ -194,52 +199,114 @@ class DspyOllamaLocal(LM):
             settings_dict["prompt"] = prompt
         settings_dict["format"] = "json"
 
+        logger.debug(f"Request settings: {json.dumps(settings_dict, indent=2)}")
+
         urlstr = (
             f"{self.base_url}/api/chat"
             if self.model_type == "chat"
             else f"{self.base_url}/api/generate"
         )
+        logger.debug(f"Sending request to: {urlstr}")
+        
         tot_eval_tokens = 0
         for i in range(kwargs["n"]):
-            response = requests.post(urlstr, json=settings_dict, timeout=self.timeout_s)
+            try:
+                response = requests.post(urlstr, json=settings_dict, timeout=self.timeout_s)
+                
+                # Log raw response for debugging
+                logger.debug(f"Raw response status: {response.status_code}")
+                logger.debug(f"Raw response content: {response.text[:500]}..." if len(response.text) > 500 else response.text)
 
-            # Check if the request was successful (HTTP status code 200)
-            if response.status_code != 200:
-                # If the request was not successful, print an error message
-                print(f"Error: CODE {response.status_code} - {response.text}")
+                # Check if the request was successful (HTTP status code 200)
+                if response.status_code != 200:
+                    logger.error(f"Error: CODE {response.status_code} - {response.text}")
+                    raise Exception(f"Ollama API error: {response.status_code} - {response.text}")
 
-            response_json = response.json()
-
-            text = (
-                response_json.get("message").get("content")
-                if self.model_type == "chat"
-                else response_json.get("response")
-            )
-            request_info["choices"].append(
-                {
-                    "index": i,
-                    "message": {
-                        "role": "assistant",
-                        "content": "".join(text),
+                try:
+                    response_json = response.json()
+                    logger.debug(f"Parsed JSON response: {json.dumps(response_json, indent=2)[:500]}..." if len(json.dumps(response_json)) > 500 else json.dumps(response_json, indent=2))
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON parsing error: {str(e)}\nResponse text: {response.text}")
+                    raise Exception(f"Failed to parse JSON response: {str(e)}")
+                
+                # Handle different response formats
+                if isinstance(response_json, list):
+                    logger.warning(f"Response is a list instead of a dictionary: {response_json}")
+                    # Convert list to dictionary with 'knowledge' field
+                    response_json = {"response": json.dumps(response_json), "knowledge": response_json}
+                    logger.debug(f"Converted response: {response_json}")
+                
+                # Extract text from response based on model type
+                if self.model_type == "chat":
+                    if "message" not in response_json:
+                        logger.error(f"'message' field missing in chat response: {response_json}")
+                        text = str(response_json)
+                    elif "content" not in response_json.get("message", {}):
+                        logger.error(f"'content' field missing in message: {response_json}")
+                        text = str(response_json.get("message", {}))
+                    else:
+                        text = response_json.get("message").get("content")
+                else:
+                    if "response" not in response_json:
+                        logger.error(f"'response' field missing: {response_json}")
+                        # Try to extract any text content from the response
+                        if isinstance(response_json, dict):
+                            text = str(response_json)
+                        else:
+                            text = str(response_json)
+                    else:
+                        text = response_json.get("response")
+                
+                logger.debug(f"Extracted text: {text[:200]}..." if len(str(text)) > 200 else text)
+                
+                request_info["choices"].append(
+                    {
+                        "index": i,
+                        "message": {
+                            "role": "assistant",
+                            "content": "".join(text) if isinstance(text, list) else text,
+                        },
+                        "finish_reason": "stop",
                     },
-                    "finish_reason": "stop",
-                },
-            )
-            tot_eval_tokens += response_json.get("eval_count", 0)
-        request_info["additional_kwargs"] = {
-            k: v for k, v in response_json.items() if k not in ["response"]
-        }
+                )
+                tot_eval_tokens += response_json.get("eval_count", 0)
+            except Exception as e:
+                logger.error(f"Error in request processing: {str(e)}")
+                # Add error information to choices
+                request_info["choices"].append(
+                    {
+                        "index": i,
+                        "message": {
+                            "role": "assistant",
+                            "content": f"Error: {str(e)}",
+                        },
+                        "finish_reason": "error",
+                    },
+                )
+        
+        try:
+            request_info["additional_kwargs"] = {
+                k: v for k, v in response_json.items() if k not in ["response"]
+            }
 
-        request_info["usage"] = {
-            "prompt_tokens": response_json.get(
-                "prompt_eval_count", self._prev_prompt_eval_count
-            ),
-            "completion_tokens": tot_eval_tokens,
-            "total_tokens": response_json.get(
-                "prompt_eval_count", self._prev_prompt_eval_count
-            )
-            + tot_eval_tokens,
-        }
+            request_info["usage"] = {
+                "prompt_tokens": response_json.get(
+                    "prompt_eval_count", self._prev_prompt_eval_count
+                ),
+                "completion_tokens": tot_eval_tokens,
+                "total_tokens": response_json.get(
+                    "prompt_eval_count", self._prev_prompt_eval_count
+                )
+                + tot_eval_tokens,
+            }
+        except Exception as e:
+            logger.error(f"Error setting additional info: {str(e)}")
+            request_info["additional_kwargs"] = {"error": str(e)}
+            request_info["usage"] = {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+            }
 
         history = {
             "prompt": prompt,
@@ -248,6 +315,7 @@ class DspyOllamaLocal(LM):
             "raw_kwargs": raw_kwargs,
         }
         self.history.append(history)
+        logger.debug(f"Final request_info: {json.dumps(request_info, indent=2)[:500]}..." if len(json.dumps(request_info)) > 500 else json.dumps(request_info, indent=2))
 
         return request_info
 
@@ -263,7 +331,21 @@ class DspyOllamaLocal(LM):
         return self.basic_request(prompt, **kwargs)
 
     def _get_choice_text(self, choice: dict[str, Any]) -> str:
-        return choice["message"]["content"]
+        try:
+            if "message" not in choice:
+                logger.error(f"'message' field missing in choice: {choice}")
+                return str(choice)
+            
+            if "content" not in choice["message"]:
+                logger.error(f"'content' field missing in message: {choice['message']}")
+                return str(choice["message"])
+            
+            content = choice["message"]["content"]
+            logger.debug(f"Extracted content from choice: {content[:200]}..." if len(str(content)) > 200 else content)
+            return content
+        except Exception as e:
+            logger.error(f"Error in _get_choice_text: {str(e)}\nChoice: {choice}")
+            return f"Error extracting text: {str(e)}"
 
     def __call__(
         self,
@@ -288,15 +370,54 @@ class DspyOllamaLocal(LM):
         assert only_completed, "for now"
         assert return_sorted is False, "for now"
 
-        response = self.forward(prompt=prompt, messages=messages, **kwargs)
-
-        choices = response["choices"]
-
-        completed_choices = [c for c in choices if c["finish_reason"] != "length"]
-
-        if only_completed and len(completed_choices):
-            choices = completed_choices
-
-        completions = [self._get_choice_text(c) for c in choices]
-
-        return completions
+        try:
+            logger.debug(f"Calling forward with prompt: {prompt[:100]}..." if prompt and len(prompt) > 100 else prompt)
+            response = self.forward(prompt=prompt, messages=messages, **kwargs)
+            logger.debug(f"Forward response received: {json.dumps(response, indent=2)[:500]}..." if len(json.dumps(response)) > 500 else json.dumps(response, indent=2))
+            
+            if "choices" not in response:
+                logger.error(f"'choices' field missing in response: {response}")
+                # Create a synthetic choice with error message
+                return [f"Error: Invalid response format - 'choices' field missing. Response: {str(response)[:200]}..."]
+            
+            choices = response["choices"]
+            logger.debug(f"Choices extracted: {choices}")
+            
+            if not choices:
+                logger.warning("No choices returned from model")
+                return ["No response generated from the model."]
+            
+            completed_choices = [c for c in choices if c.get("finish_reason") != "length"]
+            logger.debug(f"Completed choices: {completed_choices}")
+            
+            if only_completed and len(completed_choices):
+                choices = completed_choices
+            
+            try:
+                completions = []
+                for c in choices:
+                    try:
+                        text = self._get_choice_text(c)
+                        # Try to parse the text as JSON if it looks like JSON
+                        if text.strip().startswith('{') and text.strip().endswith('}'):
+                            try:
+                                parsed_json = json.loads(text)
+                                logger.debug(f"Successfully parsed JSON from response: {json.dumps(parsed_json, indent=2)[:200]}..." if len(json.dumps(parsed_json)) > 200 else json.dumps(parsed_json, indent=2))
+                                completions.append(parsed_json)
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"Text looks like JSON but failed to parse: {str(e)}. Using raw text.")
+                                completions.append(text)
+                        else:
+                            completions.append(text)
+                    except Exception as e:
+                        logger.error(f"Error extracting text from choice {c}: {str(e)}")
+                        completions.append(f"Error extracting text: {str(e)}")
+                
+                logger.debug(f"Final completions: {completions}")
+                return completions
+            except Exception as e:
+                logger.error(f"Error processing choices: {str(e)}")
+                return [f"Error processing model response: {str(e)}"] 
+        except Exception as e:
+            logger.error(f"Error in __call__: {str(e)}")
+            return [f"Error calling model: {str(e)}"]
