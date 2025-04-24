@@ -458,6 +458,7 @@ class ChatService:
             graph_knowledges_context: str,
             llm: LLM,
             embed_model: BaseEmbedding,
+            trace_url: str = "",
             annotation_silent: bool = False,
     ) -> Generator[ChatEvent | str, None, Tuple[StreamingResponse, List[dict]]]:
         if not annotation_silent:
@@ -470,6 +471,15 @@ class ChatService:
                     else "我正在检索最相关的数据",
                 ),
             )
+            if trace_url:
+                yield ChatEvent(
+                    event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
+                    payload=ChatStreamMessagePayload(
+                        state=ChatMessageSate.TRACE,
+                        display="我正在检索相关文档",
+                        context={"langfuse_url": trace_url},
+                    ),
+                )
         callback_manager = get_llamaindex_callback_manager()
         text_qa_template = get_prompt_by_jinja2_template(
             self.chat_engine_config.llm.text_qa_prompt,
@@ -647,6 +657,7 @@ class ChatService:
                 graph_knowledges_context=graph_knowledges_context,
                 llm=_llm,
                 embed_model=_embed_model,
+                trace_url=trace_url,
             )
 
             response_text = ""
