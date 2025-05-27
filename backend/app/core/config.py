@@ -86,14 +86,14 @@ class Settings(BaseSettings):
             raise ValueError("SENTRY_PROFILES_SAMPLE_RATE must be between 0 and 1")
         return self
 
-    LOCAL_FILE_STORAGE_PATH: str = os.environ.get("LOCAL_FILE_STORAGE_PATH", "/hd1/lyx/sundbai/data")
+    LOCAL_FILE_STORAGE_PATH: str = os.environ.get("LOCAL_FILE_STORAGE_PATH", "/hd1/workspace/sundb-ai/project/code/sundbai_midterm_clone/sundbai_midterm/data")
 
 
     PGDB_HOST: str = "localhost"
-    PGDB_PORT: int = int(os.environ.get("PGDB_PORT", "5433"))
-    PGDB_USER: str = "myuser"
-    PGDB_PASSWORD: str = "mypassword"
-    PGDB_DATABASE: str = "mydb"
+    PGDB_PORT: int = int(os.environ.get("PGDB_PORT", "5432"))
+    PGDB_USER: str = "postgres"
+    PGDB_PASSWORD: str = "1234qwer"
+    PGDB_DATABASE: str = "sundbai_midtermdb_clone"
     PGDB_SSL: bool = False
 
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"

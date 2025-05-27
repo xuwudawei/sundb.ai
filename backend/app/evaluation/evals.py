@@ -75,7 +75,8 @@ class Evaluation:
 
         llm_provider = llm_provider.lower()
         if llm_provider == "openai":
-            self._llama_llm = OpenAI(model="gpt-4o-mini")
+            #self._llama_llm = OpenAI(model="gpt-4o-mini")
+            self._llama_llm = OpenAI(model="gpt-4o") #changed to gpt-4o for testing on 16th April
         elif llm_provider == "gemini":
             self._llama_llm = Gemini(model="models/gemini-1.5-pro-002")
         else:

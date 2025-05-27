@@ -1,0 +1,122 @@
+[
+    {
+        "part_number": "1",
+        "chapter_number": "1",
+        "section_number": "1",
+        "title": "[1][Getting Started]-[1][入门]-[1][前言]",
+        "abstract": "本章说明了本手册的适用版本、操作平台与撰写范围，明确其编写目的在于为 SUNDB 数据库的安装、配置与管理提供操作指南，并界定了适用对象为系统开发人员、数据库使用者及集群性能管理员等相关角色。",
+        "keywords": ["适用版本", "适用对象", "操作平台", "使用范围说明", "管理参考"]
+    },
+    {
+        "part_number": "1",
+        "chapter_number": "1",
+        "section_number": "2",
+        "title": "[1][Getting started]-[1][入门]-[2][概要]",
+        "abstract": "本章节介绍了 SUNDB 数据库系统的整体技术架构，重点包括其系统组成、核心进程、以及两种访问模式（Direct Access 与 Client/Server）的运行机制和适用场景。同时，章节还对集群系统架构进行了简要说明，阐明了其在单机架构基础上引入的分布式组件及其对事务一致性和高可用性的支持。",
+        "keywords": ["多进程模型", "访问模式切换", "gmaster", "集群系统架构"]
+    },
+    {
+        "part_number": "1",
+        "chapter_number": "1",
+        "section_number": "3",
+        "title": "[1][Getting started]-[1][入门]-[3][SUNDB集群的特征]",
+        "abstract": "本章节主要介绍了 SUNDB 集群系统在架构层面的性能优势与使用限制。内容分为两部分：集群的特点和集群的约束。在特性方面，SUNDB 集群具备高吞吐、高可用、在线扩展、完备事务支持和应用兼容性等优势，能够实现线性扩展和事务一致性；在约束方面，则强调集群环境下对主键、唯一索引与分片键的绑定要求，以及对非确定性语句、全局索引、序列一致性等操作的限制。",
+        "keywords": ["shared - nothing集群架构", "高可用组", "节点级在线扩容", "集群级MVCC一致性保障", "分片约束规则（Sharding Constraints）"]
+    },
+    {
+        "part_number": "1",
+        "chapter_number": "2",
+        "section_number": "1",
+        "title": "[1][Getting started]-[2][指南]-[1][SUNDB实例管理]",
+        "abstract": "本章介绍了 SUNDB 实例的组成结构与运行机制，内容涵盖参数配置与环境变量设置，后台与客户端进程职责划分，内存结构的静态与动态区域设计，以及实例与监听器的启动、关闭过程，对实例生命周期及运行环境的进行了系统性描述。",
+        "keywords": ["实例组成与配置结构", "gmaster", "共享内存区配置", "访问模式", "实例启动与关闭阶段控制"]
+    },
+    {
+        "part_number": "1",
+        "chapter_number": "2",
+        "section_number": "2",
+        "title": "[1][Getting started]-[2][指南]-[2][SUNDB的安装、删除与创建数据库]",
+        "abstract": "本章系统介绍了 SUNDB 的安装、卸载与数据库创建流程，内容涵盖安装包目录结构、软件支持平台与系统环境要求、内核参数(包括共享内存、信号量、网络)的说明及推荐值、环境变量配置、实例目录规范，安装与删除数据库操作指令，以及使用 gcreatedb 创建单机或集群数据库的具体参数说明。章节最后还说明了如何构建系统字典模式信息，以支持后续系统管理与第三方工具对接。",
+        "keywords": ["软件目录结构(SUNDB_HOME/SUNDB_DATA)", "系统安装与环境依赖", "gcreatedb创建流程与参数", "数据库文件删除机制", "系统字典模式（DICTIONARY / INFO / PERF）", "内核参数说明及推荐值"]
+    },
+    {
+        "part_number": "1",
+        "chapter_number": "2",
+        "section_number": "3",
+        "title": "[1][Getting started]-[2][指南]-[3][数据库存储结构管理]",
+        "abstract": "本章全面介绍了 SUNDB 数据库的存储结构与管理机制，内容涵盖数据库内存与磁盘层级的组成关系，包括控制文件、在线重做日志、回滚段、数据文件与表空间的结构与作用；并介绍了通过工具和视图查看各类存储信息的方法；此外，还详细说明了表空间的创建、扩展、删除、离线切换、重命名等操作方式，以及磁盘表空间的自动扩展属性设置。章节最后介绍了 TDS 与 CDS 两种存储模式的特性及适用场景。",
+        "keywords": ["SUNDB表空间类型与职责", "数据文件组织结构（Page/Extent/Segment）", "控制文件与重做日志机制", "表空间管理操作（创建 / 删除 / 扩容）", "事务存储模式策略（TDS / CDS）"]
+    },
+    {
+        "part_number": "1",
+        "chapter_number": "2",
+        "section_number": "4",
+        "title": "[1][Getting started]-[2][指南]-[4][模式对象(Schema Object) 管理]",
+        "abstract": "本章讲解了 SUNDB 中模式对象的类型与管理机制，内容涵盖表、索引与序列等对象的创建语法、属性配置与使用约束，说明了对象权限控制方式及集群环境下的行为差异，构建对逻辑数据层的统一管理能力。",
+        "keywords": ["支持的模式对象类型", "表结构定义约束", "索引定义与属性", "序列分配与使用规则", "对象共享与授权策略"]
+    },
+    {
+        "part_number": "1",
+        "chapter_number": "2",
+        "section_number": "5",
+        "title": "[1][Getting started]-[2][指南]-[5][用户管理]",
+        "abstract": "本章讲解了 SUNDB 数据库中用户的创建、修改与删除机制，内容涵盖相关语句的使用方式与参数配置选项，包括账户名、权限、默认表空间、密码策略、状态控制等关键参数的定义与管理，构建对用户生命周期及权限体系的细粒度控制能力。",
+        "keywords": ["用户创建参数", "用户删除规则", "密码与身份校验", "用户绑定表空间设置", "内置用户权限"]
+    },
+    {
+        "part_number": "1",
+        "chapter_number": "2",
+        "section_number": "6",
+        "title": "[1][Getting started]-[2][指南]-[6][SUNDB参数]",
+        "abstract": "本章介绍了 SUNDB 数据库在创建与启动过程中所需配置的部分关键参数，内容包括字典、数据、回滚、临时等各类表空间及重做日志的初始设置项，以及数据库启动时的共享内存、进程数、会话数、日志缓冲区与通信缓冲区等核心参数。需要注意的是，文中仅对参数用途进行了简要描述，并未提供具体取值或推荐范围。",
+        "keywords": ["数据库初始化参数", "日志结构配置参数", "启动共享内存与进程通信参数", "并发连接控制参数"]
+    },
+    {
+        "part_number": "1",
+        "chapter_number": "2",
+        "section_number": "7",
+        "title": "[1][Getting started]-[2][指南]-[7][SUNDB实用程序]",
+        "abstract": "本章介绍了 SUNDB 提供的三个命令行工具的功能与使用方法，包括：用于创建/初始化数据库实例的工具 gcreatedb，其支持通过参数配置表空间路径、字符集、时区等关键属性；用于执行 SQL 语句的交互式工具 gsql，支持批处理与登录参数控制；以及用于数据导入导出的 gloader 工具，支持文本格式（如 CSV）的加载与抽取，并提供灵活的参数选项与日志控制机制。",
+        "keywords": ["初始化数据库工具gcreatedb", "gcreatedb参数配置说明", "gsql交互式SQL工具", "gloader数据导入导出工具"]
+    },
+    {
+        "part_number": "2",
+        "chapter_number": "5",
+        "section_number": "1",
+        "title": "[2][Administration Manual]-[5][SUNDB数据库管理基础]-[1][SUNDB数据库创建与配置]",
+        "abstract": "本章讲解了使用 gcreatedb 创建 SUNDB 数据库时的关键考虑事项，包括表空间规划、文件分布与系统参数准备，介绍了数据库在创建或启动过程中常用初始参数的设置方式，以及通过系统环境变量与配置文件管理参数的方法。章节还区分说明了文本参数文件与二进制参数文件的格式与优先级，明确了参数生效机制及 SQL 语句对参数管理的作用。",
+        "keywords": ["创建数据库时参数控制", "初始资源分配策略", "数据库路径规划规范", "属性文件配置规则"]
+    },
+    {
+        "part_number": "2",
+        "chapter_number": "5",
+        "section_number": "2",
+        "title": "[2][Administration Manual]-[5][SUNDB数据库管理基础]-[2][SUNDB实例的启动与结束]",
+        "abstract": "本章介绍了 SUNDB 实例的多阶段启动机制及实例关闭的不同模式。启动部分分为 Idle、Nomount、Mount 与 Open 四个阶段，详细说明了每阶段的功能特性、可设置参数及状态判断方式；关闭部分则定义了 NORMAL、TRANSACTIONAL、IMMEDIATE 与 ABORT 四种结束模式，分别适用于正常停机、事务处理完毕后停机、立即停机及异常强制停机场景，并说明各模式对恢复行为的影响。",
+        "keywords": ["实例多阶段启动流程", "启动阶段参数控制", "实例状态判断机制", "实例关闭操作模式", "会话/事务结束策略"]
+    },
+    {
+        "part_number": "2",
+        "chapter_number": "5",
+        "section_number": "3",
+        "title": "[2][Administration Manual]-[5][SUNDB数据库管理基础]-[3][进程管理]",
+        "abstract": "本章详细介绍了 SUNDB 实例运行中的主进程 gmaster 及其核心线程体系，涵盖日志刷新（Log Flusher）、检查点推进（Checkpoint）、归档（Log Archiving）、页刷写（Page Flusher）、资源清理（Cleanup）等关键任务，支持对事务、会话、磁盘页状态的实时监控与调度控制。章节进一步说明了在集群场景下通过 Cluster Recover 与 Failover 机制实现 in-doubt 事务恢复与故障转移处理。内容还包括多个控制参数（如 TIMER_INTERVAL、MAXIMUM_FLUSH_PAGE_COUNT、SHARED_SESSION）的用途与配置方式，体现后台进程在运行控制、状态监控、事务管理、资源管理与容错恢复中的关键作用。  ",
+        "keywords": ["后台线程管理机制", "日志刷写与归档线程", "数据页刷新与并发I/O策略", "集群事务恢复与故障转移", "监听进程接入机制"]
+    },
+    {
+        "part_number": "2",
+        "chapter_number": "5",
+        "section_number": "4",
+        "title": "[2][Administration Manual]-[5][SUNDB数据库管理基础]-[4][内存管理]",
+        "abstract": "本章介绍了 SUNDB 实例的内存结构与分配机制，区分说明了系统共享内存区域（SSA）与会话私有内存区域（PSA）的作用与配置方式。内容包括 SSA 在进程间共享中的物理地址绑定机制及其对日志缓存、执行计划缓存等核心组件的承载功能；以及 PSA 作为会话级 heap 内存的自动扩展策略与容量控制参数，明确指出各区域关键配置项如 SHARED_MEMORY_STATIC_SIZE 与 PRIVATE_STATIC_AREA_SIZE 对系统稳定性与可用性的影响。",
+        "keywords": ["内存结构分层模型", "SSA配置与容量管理", "PSA扩展与限制机制", "共享内存地址绑定规则"]
+    },
+    {
+        "part_number": "2",
+        "chapter_number": "5",
+        "section_number": "5",
+        "title": "[2][Administration Manual]-[5][SUNDB数据库管理基础]-[5][监控]",
+        "abstract": "本章系统介绍了 SUNDB 数据库的运行监控机制，涵盖通过 system.trc、xa.trc、listener.trc 等日志文件对实例启动、运行、结束各阶段中 checkpoint、日志归档、页刷新等后台线程行为进行追踪，日志内容支持通过环境变量控制粒度，覆盖 DDL、会话、索引、表空间等关键事件。章节同时介绍了通过系统视图查询死锁、事务状态与资源使用的能力，为系统稳定性分析与问题定位提供数据支撑。",
+        "keywords": ["系统日志配置", "系统日志级别控制", "线程行为日志", "实例行为日志", "死锁与事务监控视图"]
+    }
+]

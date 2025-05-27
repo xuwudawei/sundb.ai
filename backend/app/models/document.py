@@ -42,6 +42,10 @@ class Document(UpdatableBaseModel, table=True):
     index_status: DocIndexTaskStatus = DocIndexTaskStatus.NOT_STARTED
     index_result: str = Field(sa_column=Column(Text, nullable=True))
     data_source_id: int = Field(nullable=True)
+    # 新增的三个字段
+    part_number: Optional[int] = Field(nullable=True, index=True)  # 部分编号
+    chapter_number: Optional[int] = Field(nullable=True, index=True)  # 节编号
+    section_number: Optional[int] = Field(nullable=True, index=True) # 节编号
 
     __tablename__ = "documents"
 

@@ -1,9 +1,9 @@
 import json
 import time
 import logging
-
+import re
 import dspy
-
+from sqlalchemy.exc import SQLAlchemyError
 from uuid import UUID
 from typing import List, Generator, Optional, Tuple, Type, Callable
 from datetime import datetime, UTC
@@ -471,6 +471,48 @@ class ChatService:
                 ),
             )
         callback_manager = get_llamaindex_callback_manager()
+        #JSON 文件路径
+        json_file_path = '/hd1/workspace/sundb-ai/project/code/sundbai_midterm/sundb.ai/backend/app/rag/structured_.json'
+        logger.info("原始问题: %s", self.user_question)
+
+
+
+        # 读取 JSON 文件并赋值给 manual_structure
+        with open(json_file_path, 'r', encoding='utf-8') as file:
+            manual_structure = json.load(file)
+        # # 动态初始化章节索引（新增）
+        # if hasattr(self, '_manual_sections_index'):
+        #     logging.info("索引已经建立过。")
+        # else:
+        #     logging.info("索引未建立，开始建立索引...")
+        #     self._initialize_manual_sections_index(embed_model)  # 使用传入的embed_model
+        #     logging.info("索引建立完成。")
+        # 新增：匹配相关章节
+        matched_sections = self._match_manual_sections(llm, self.user_question, manual_structure)
+        # matched_sections = self._match_manual_sections(refined_question)
+        # 输出匹配的章节
+        if matched_sections:
+            logger.info("Matched sections based on the question: %s", self.user_question)
+            for section in matched_sections:
+                logger.info(
+                    "Part: %s, Chapter: %s, Section: %s, Title: %s",
+                    section["part_number"],
+                    section["chapter_number"],
+                    section["section_number"],
+                    section["title"],
+                )
+        else:
+            logger.warning("No sections matched for the question: %s", self.user_question)
+        document_ids = self._fetch_section_document_ids(matched_sections)
+
+        # 输出 document_id
+        logger.info(f"Matched document IDs: {document_ids}")
+        start_time = datetime.now()
+        logger.info(f"Process started at: {start_time}")
+
+
+
+
         text_qa_template = get_prompt_by_jinja2_template(
             self.chat_engine_config.llm.text_qa_prompt,
             current_date=datetime.now().strftime("%Y-%m-%d"),
@@ -482,31 +524,132 @@ class ChatService:
             graph_knowledges=graph_knowledges_context,
             original_question=self.user_question,
         )
-        vector_store = TiDBVectorStore(session=self.db_session)
-        vector_index = VectorStoreIndex.from_vector_store(
-            vector_store,
-            embed_model=embed_model,
-            callback_manager=callback_manager,
-        )
-        response_synthesizer = get_response_synthesizer(
-            llm=llm,
-            text_qa_template=text_qa_template,
-            refine_template=refine_template,
-            streaming=True,
-            callback_manager=callback_manager,
-        )
-        query_engine = vector_index.as_query_engine(
-            llm=llm,
-            response_synthesizer=response_synthesizer,
-            node_postprocessors=self._node_postprocessors,
-            similarity_top_k=self._similarity_top_k,
-        )
-        query_engine.callback_manager = callback_manager
-        for _np in self._node_postprocessors:
-            _np.callback_manager = callback_manager
-        response: StreamingResponse = query_engine.query(refined_question)
-        source_documents = self._get_source_documents(response)
+        # 记录日志
+        logging.info(f"text_qa_template: {text_qa_template}")
+        logging.info(f"refine_template: {refine_template}")
 
+        def create_query_engine(filter_ids: List[str] = None) -> Tuple[StreamingResponse, List[dict]]:
+            """创建带文档过滤的查询引擎"""
+            # 创建带过滤条件的向量存储
+            vector_store = TiDBVectorStore(
+                session=self.db_session,
+                filter_document_ids=filter_ids  # 支持文档过滤
+            )
+
+            # 创建向量索引
+            vector_index = VectorStoreIndex.from_vector_store(
+                vector_store=vector_store,
+                embed_model=embed_model,
+                callback_manager=callback_manager,
+            )
+
+            # 配置响应合成器
+            response_synthesizer = get_response_synthesizer(
+                llm=llm,
+                text_qa_template=text_qa_template,
+                refine_template=refine_template,
+                streaming=True,
+                callback_manager=callback_manager,
+            )
+
+            # 创建查询引擎
+            query_engine = vector_index.as_query_engine(
+                llm=llm,
+                response_synthesizer=response_synthesizer,
+                node_postprocessors=self._node_postprocessors,
+                similarity_top_k=self._similarity_top_k,
+            )
+
+            # 设置回调管理器
+            query_engine.callback_manager = callback_manager
+            for _np in self._node_postprocessors:
+                _np.callback_manager = callback_manager
+
+            return query_engine
+
+        def is_local_search_effective(local_response) -> bool:
+            """判断局部检索是否有效"""
+            # 空结果直接无效
+            if not local_response.source_nodes:
+                return False
+
+            # 关键指标提取
+            node_count = len(local_response.source_nodes)
+            top_score = local_response.source_nodes[0].score
+
+            # 双重条件判断
+            score_condition = top_score >= 0.8  # 最高相关性达标
+            quantity_condition = node_count >= 3  # 结果数量充足
+
+            # 任意条件不满足即视为效果不佳
+            return score_condition and quantity_condition
+
+        final_response = None
+        source_documents = []
+        if document_ids:
+            # 创建局部查询引擎（只加载相关文档）
+            local_query_engine = create_query_engine(document_ids)
+            response: StreamingResponse = local_query_engine.query(refined_question)
+
+            # 调试信息改为仅记录元数据，不消费生成器
+            logger.info("相关节点数量: %d", len(response.source_nodes))
+            if response.source_nodes:
+                logger.info("最高相关性得分: %.4f", response.source_nodes[0].score)
+                # 记录前3个节点的部分信息用于调试
+                for i, node in enumerate(response.source_nodes[:3]):
+                    logger.debug("节点 %d 元数据: %s", i + 1, str(node.metadata)[:100])
+            else:
+                logger.warning("没有找到相关节点")
+
+            # 判断检索效果（基于元数据，不消费生成器）
+            if is_local_search_effective(response):
+                logger.info("局部检索效果达标，使用本地结果")
+                final_response = response
+                source_documents = self._get_source_documents(response)
+                logger.info("局部检索得到的 source_documents: %s", source_documents)
+            else:
+                logger.warning(
+                    "局部检索效果不佳 (节点数=%d, 最高分=%.2f)，触发回退机制",
+                    len(response.source_nodes),
+                    response.source_nodes[0].score if response.source_nodes else 0
+                )
+        if not final_response:
+            logger.info("执行全局检索")
+
+            vector_store = TiDBVectorStore(session=self.db_session)
+            vector_index = VectorStoreIndex.from_vector_store(
+                vector_store,
+                embed_model=embed_model,
+                callback_manager=callback_manager,
+            )
+            response_synthesizer = get_response_synthesizer(
+                llm=llm,
+                text_qa_template=text_qa_template,
+                refine_template=refine_template,
+                streaming=True,
+                callback_manager=callback_manager,
+            )
+            query_engine = vector_index.as_query_engine(
+                llm=llm,
+                response_synthesizer=response_synthesizer,
+                node_postprocessors=self._node_postprocessors,
+                similarity_top_k=self._similarity_top_k,
+            )
+            query_engine.callback_manager = callback_manager
+            for _np in self._node_postprocessors:
+                _np.callback_manager = callback_manager
+            response: StreamingResponse = query_engine.query(refined_question)
+            final_response = response
+            source_documents = self._get_source_documents(response)
+            logger.info("全局检索得到的 source_documents: %s", source_documents)
+
+        # 记录结束时间
+        end_time = datetime.now()
+        logger.info(f"Process ended at: {end_time}")
+
+        # 计算并输出总耗时
+        total_time = end_time - start_time
+        logger.info(f"Total time taken: {total_time}")
         if not annotation_silent:
             yield ChatEvent(
                 event_type=ChatEventType.MESSAGE_ANNOTATIONS_PART,
@@ -523,7 +666,247 @@ class ChatService:
                 ),
             )
 
-        return response, source_documents
+        return final_response, source_documents
+
+    def _fetch_section_document_ids(self, matched_sections: List[dict]) -> List[str]:
+        """根据匹配的章节获取对应的文档ID集合（修正会话方法版本）
+
+        Args:
+            matched_sections: 匹配的章节列表，每个章节应包含
+                part_number/chapter_number/section_number 字段
+
+        Returns:
+            去重后的文档ID列表
+        """
+        document_ids = []
+
+        if not matched_sections:
+            logger.debug("输入 matched_sections 为空列表，直接返回空结果")
+            return []
+
+        logger.info(f"开始处理 {len(matched_sections)} 个匹配章节的文档查询")
+
+        try:
+            for idx, section in enumerate(matched_sections, 1):
+                # 参数校验与日志
+                required_keys = ["part_number", "chapter_number", "section_number"]
+                if not all(key in section for key in required_keys):
+                    logger.error(f"第 {idx} 个章节缺少必要字段，跳过处理 | 数据: {section}")
+                    continue
+
+                part = section["part_number"]
+                chapter = section["chapter_number"]
+                section_num = section["section_number"]
+
+                logger.debug(
+                    f"正在查询章节 {idx}/{len(matched_sections)}: Part={part}, Chapter={chapter}, Section={section_num}")
+
+                # 构建查询
+                stmt = select(Document.id).where(
+                    Document.part_number == part,
+                    Document.chapter_number == chapter,
+                    Document.section_number == section_num
+                )
+
+                # 正确执行查询
+                result = self.db_session.execute(stmt)  # 修正点1
+                records = result.scalars().all()  # 修正点2
+
+                logger.debug(f"查询到 {len(records)} 个相关文档")
+
+                # 处理结果
+                if records:
+                    current_ids = [str(doc_id) for doc_id in records]
+                    document_ids.extend(current_ids)
+                    logger.debug(f"新增文档ID列表: {current_ids}")
+                else:
+                    logger.warning(f"未找到匹配文档 | Part={part}, Chapter={chapter}, Section={section_num}")
+
+        except SQLAlchemyError as e:
+            logger.critical("数据库查询异常！错误信息：%s", str(e), exc_info=True)
+            raise
+        except AttributeError as e:
+            logger.error("会话方法调用错误，请检查SQLAlchemy版本：%s", str(e), exc_info=True)
+            raise
+        except Exception as e:
+            logger.error("处理过程中出现未预期错误：%s", str(e), exc_info=True)
+            raise
+
+        # 去重处理（保持顺序）
+        seen = set()
+        unique_ids = [x for x in document_ids if not (x in seen or seen.add(x))]
+
+        logger.info(f"最终获取到 {len(unique_ids)} 个唯一文档ID")
+        return unique_ids
+
+    def _match_manual_sections(
+            self,
+            llm,
+            question: str,
+            manual_structure: list[dict]
+    ) -> list[dict]:
+        """使用LLM匹配手册章节（带语义标签版）"""
+        from llama_index.core.llms import ChatMessage
+
+
+        # 构造带信息的章节列表（格式优化）
+        sections_str = "\n".join([
+            f"{s['part_number']}.{s['chapter_number']}.{s['section_number']}  {s['title']}\n摘要：{s['abstract']}\n关键词：{', '.join(s['keywords'])}"
+            for s in manual_structure
+        ])
+
+        # 优化提示词，新增匹配依据输出要求
+        prompt = f"""请根据用户提出的问题，从下面的手册目录里找出与之相关的章节。在匹配时，需要综合考量章节的标题、摘要以及关键词所蕴含的语义信息。
+
+        问题：{question}
+
+        手册目录格式说明：
+        每一条目录信息包含章节编号、标题、摘要和关键词，各部分的具体说明如下：
+        - 章节编号：采用标准的三级编号格式，即 Part.Chapter.Section，用于唯一标识一个章节。
+        - 标题：对该章节核心内容的简要概括。
+        - 摘要：对该章节具体内容的详细概述，能帮助你了解章节的主要信息。
+        - 关键词：该章节的核心要点，以逗号分隔列出。
+
+        手册目录内容：
+        {sections_str}
+
+        匹配原则：
+        1. 优先选择整体语义（包括标题、摘要和关键词的综合语义）与问题最匹配的章节。
+        2. 若整体语义匹配度相近，再考虑关键词与问题的匹配程度。
+        3. 若关键词匹配度也相近，最后考虑标题中的关键词与问题的匹配情况。
+        4. 返回的结果必须采用标准的三级编号（Part.Chapter.Section）。
+
+        输出要求：
+        请先用自然语言说明匹配理由，再输出JSON格式结果。匹配理由需要包含：
+        - 问题与各章节在语义层面的关联性分析
+        - 关键词匹配情况的说明
+        - 最终选择这些章节的理由
+
+        输出格式示例：
+        问题主要涉及设备初始化操作，以下章节的摘要和关键词与问题相关：
+        - 第1.2.3节的摘要包含设备初始化流程说明，关键词"初始化"、"配置"与问题直接相关
+        - 第2.1.5节虽然包含配置相关内容，但主要针对网络设置，与设备初始化关联度较低
+
+        ```json
+        [{{"part_number": "1", "chapter_number": "2", "section_number": "3", "title": "设备初始化流程"}}]
+        """
+
+        # 调用LLM
+        response = llm.complete(prompt)
+        logger.debug("LLM原始响应: %s", response.text)
+
+        try:
+            # 提取匹配依据和JSON内容
+            reasoning = "未提取到匹配依据"
+            json_content = response.text
+
+            # 通过正则表达式分离自然语言解释和JSON代码
+            match = re.search(
+                r'(.*?)(```json\s*?\n.*?\n```)(.*)',
+                response.text,
+                re.DOTALL
+            )
+
+            if match:
+                # 提取匹配依据部分
+                reasoning = match.group(1).strip()
+                # 提取并清理JSON部分
+                json_content = match.group(2)
+                cleaned_response = re.sub(
+                    r'^```json\n|```$',
+                    '',
+                    json_content,
+                    flags=re.MULTILINE
+                ).strip()
+
+                # 记录匹配依据到日志（新增关键日志点）
+                logger.info(
+                    "LLM匹配依据分析：\n问题：'%s'\n匹配逻辑：%s",
+                    question,
+                    reasoning
+                )
+            else:
+                cleaned_response = re.sub(
+                    r'^```json\n|```$',
+                    '',
+                    response.text,
+                    flags=re.MULTILINE
+                ).strip()
+                logger.warning("响应中未找到明确的JSON代码块")
+
+            # 解析JSON（保持原有逻辑）
+            matched = json.loads(cleaned_response)
+            logger.debug("解析后的JSON内容: %s", matched)
+
+            if not isinstance(matched, list):
+                logger.warning("无效的匹配结果格式: %s", matched)
+                return []
+
+            # 验证匹配结果并构建valid_sections
+            valid_sections = []
+            for item in matched:
+                if not all(map(str.isdigit, [item.get('part_number'),
+                                             item.get('chapter_number'),
+                                             item.get('section_number')])):
+                    logger.warning("无效的章节编号格式: %s", item)
+                    continue
+
+                found = next(
+                    (s for s in manual_structure
+                     if s["part_number"] == item["part_number"] and
+                     s["chapter_number"] == item["chapter_number"] and
+                     s["section_number"] == item["section_number"]),
+                    None
+                )
+                if found:
+                    valid_sections.append({
+                        **found,
+                        "matched_title": item.get("title", "未提供标题"),
+                        "matched_keywords": found.get("keywords", []),
+                        "matched_abstract": found.get("abstract", ""),
+                        "matching_reason": reasoning  # 将匹配依据也存入结果中
+                    })
+                    logger.debug("匹配成功 问题：'%s' ▶ 章节：%s | 关键词：'%s' | 摘要：'%s'",
+                                 question,
+                                 f"{found['part_number']}.{found['chapter_number']}.{found['section_number']}",
+                                 found['keywords'],
+                                 found['abstract'])
+                else:
+                    logger.warning("未找到匹配的章节: %s", item)
+
+            # 去重处理（修复不可哈希问题）
+            seen = set()
+            unique_sections = []
+            for section in valid_sections:
+                identifier = (
+                    section["part_number"],
+                    section["chapter_number"],
+                    section["section_number"]
+                )
+                if identifier not in seen:
+                    seen.add(identifier)
+                    unique_sections.append(section)
+            valid_sections = unique_sections
+
+            logger.info("语义匹配结果: %s",
+                        [{"part": s["part_number"],
+                          "chapter": s["chapter_number"],
+                          "section": s["section_number"],
+                          "标题": s["title"],
+                          "匹配关键词": s.get("keywords", []),
+                          "匹配摘要": s.get("abstract", ""),
+                          "匹配依据": s.get("matching_reason", "")[:100] + "..." if len(
+                              s.get("matching_reason", "")) > 100 else s.get("matching_reason", "")}
+                         for s in valid_sections])
+
+            return valid_sections
+
+        except json.JSONDecodeError as e:
+            logger.error("JSON解析错误: %s\n原始响应: %s", str(e), response.text)
+            return []
+        except Exception as e:
+            logger.error("匹配过程中发生意外错误: %s", str(e))
+            return []
 
     def _chat_finish(
             self,

@@ -98,13 +98,13 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
             "description_vec",
-            Vector(dim=settings.EMBEDDING_DIMS),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
         sa.Column(
             "meta_vec",
-            Vector(dim=settings.EMBEDDING_DIMS),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
@@ -116,14 +116,14 @@ def upgrade():
         sa.Column("query", sa.Text(), nullable=True),
         sa.Column(
             "query_vec",
-            Vector(dim=settings.EMBEDDING_DIMS),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
         sa.Column("value", sa.Text(), nullable=True),
         sa.Column(
             "value_vec",
-            Vector(dim=settings.EMBEDDING_DIMS),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
@@ -289,7 +289,7 @@ def upgrade():
         sa.Column("meta", sa.JSON(), nullable=True),
         sa.Column(
             "embedding",
-            Vector(dim=settings.EMBEDDING_DIMS),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),
@@ -329,7 +329,7 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
             "description_vec",
-            Vector(dim=settings.EMBEDDING_DIMS),
+            Vector(dim=1536),
             nullable=True,
             comment="hnsw(distance=cosine)",
         ),

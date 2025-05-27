@@ -1,50 +1,50 @@
 website:
   title:
-    default: "TiDB.AI"
+    default: "SUNDB.AI"
     data_type: str
     description: "The title of the website."
     client: true
   description:
-    default: "Knowledge Graph based RAG that built with TiDB Serverless Vector Storage and LlamaIndex"
+    default: "Knowledge Graph based RAG that built with SUNDB Serverless Vector Storage and LlamaIndex"
     data_type: str
     description: "The description of the website."
     client: true
   homepage_title:
-    default: "Ask anything about TiDB"
+    default: "Ask anything about SUNDB"
     data_type: str
     description: "The title of the homepage."
     client: true
   homepage_example_questions:
     default:
-      - "What is TiDB?"
-      - "Does TiDB support FOREIGN KEY?"
-      - "Does TiDB support serverless?"
+      - "What is SUNDB?"
+      - "Does SUNDB support FOREIGN KEY?"
+      - "Does SUNDB support serverless?"
     data_type: list
     description: "The example questions on the homepage."
     client: true
   homepage_footer_links:
     default:
       - text: "Release Notes"
-        href: "https://tidb.ai/docs/changelog"
-      - text: "Powered by TiDB Vector"
-        href: "https://tidb.cloud/ai"
+        href: "https://sundb.ai/docs/changelog"
+      - text: "Powered by SUNDB Vector"
+        href: "https://sundb.cloud/ai"
       - text: "© 2024 PingCAP"
         href: "https://pingcap.com"
     data_type: list
     description: "The footer links on the homepage."
     client: true
   logo_in_dark_mode:
-    default: "https://tidb.ai/tidb-ai-light.svg"
+    default: "https://sundb.ai/sundb-ai-light.svg"
     data_type: str
     description: "The logo in dark mode."
     client: true
   logo_in_light_mode:
-    default: "https://tidb.ai/tidb-ai.svg"
+    default: "https://sundb.ai/sundb-ai.svg"
     data_type: str
     description: "The logo in light mode."
     client: true
   social_github:
-    default: "https://github.com/pingcap/tidb.ai"
+    default: "https://github.com/pingcap/sundb.ai"
     data_type: str
     description: "The link to the github"
     client: true
@@ -67,9 +67,9 @@ website:
 custom_js:
   custom_js_example_questions:
     default:
-      - "What is TiDB?"
-      - "Does TiDB support FOREIGN KEY?"
-      - "Does TiDB support serverless?"
+      - "What is SUNDB?"
+      - "Does SUNDB support FOREIGN KEY?"
+      - "Does SUNDB support serverless?"
     data_type: list
     description: "The example questions on the custom_js."
     client: true
@@ -79,12 +79,12 @@ custom_js:
     description: "The button label on the custom_js."
     client: true
   custom_js_button_img_src:
-    default: "https://tidb.ai/tidb-ai-widget.svg"
+    default: "https://sundb.ai/sundb-ai-widget.svg"
     data_type: str
     description: "The button image on the custom_js."
     client: true
   custom_js_logo_src:
-    default: "https://tidb.ai/tidb-ai-widget.svg"
+    default: "https://sundb.ai/sundb-ai-widget.svg"
     data_type: str
     description: "The logo on the custom_js."
     client: true
