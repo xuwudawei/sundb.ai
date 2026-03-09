@@ -5,7 +5,7 @@ https://github.com/uuid6/uuid6-ietf-draft.
 
 Repo: https://github.com/oittaa/uuid6-python
 
-Copy from: https://github.com/jonra1993/fastapi-alembic-sqlmodel-async/blob/main/backend/app/app/utils/uuid6.py
+Copy from: https://github.com/vargasjona/fastapi-alembic-sqlmodel-async/blob/main/backend/app/app/utils/uuid6.py
 """
 
 import secrets
